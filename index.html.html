@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CS Agent Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── TOKENS ── */
+:root{
+  --b9:#0c2461;--b8:#1a3fa0;--b7:#1d4ed8;--b6:#2563eb;--b5:#3b82f6;--b4:#60a5fa;--b3:#93c5fd;--b1:#dbeafe;--b0:#eff6ff;
+  --w:#fff;--g0:#f8fafc;--g1:#f1f5f9;--g2:#e2e8f0;--g3:#cbd5e1;--g4:#94a3b8;--g5:#64748b;--g6:#475569;--g7:#334155;--g9:#0f172a;
+  --ok5:#22c55e;--ok1:#dcfce7;--ok7:#15803d;
+  --err5:#ef4444;--err1:#fee2e2;--err7:#b91c1c;
+  --warn5:#f59e0b;--warn1:#fef3c7;--warn7:#b45309;
+  --pur5:#8b5cf6;--pur1:#ede9fe;--pur7:#6d28d9;
+  --sh0:0 1px 2px rgba(15,36,100,.05);
+  --sh1:0 2px 8px rgba(15,36,100,.08);
+  --sh2:0 6px 24px rgba(15,36,100,.12);
+  --sh3:0 16px 48px rgba(15,36,100,.18);
+  --r:8px;--rm:12px;--rl:16px;--rxl:22px;
+  --sbw:240px;--tbh:58px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--g0);color:var(--g9);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── LOADER ── */
+#loader{position:fixed;inset:0;background:var(--w);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .4s}
+#loader.out{opacity:0;pointer-events:none}
+.spin{width:42px;height:42px;border-radius:50%;border:3.5px solid var(--g2);border-top-color:var(--b6);animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;color:var(--g9)}
+.load-sub{font-size:12px;color:var(--g4);margin-top:-8px}
+
+/* ── SIDEBAR ── */
+.sb{position:fixed;top:0;left:0;width:var(--sbw);height:100vh;background:var(--b9);display:flex;flex-direction:column;z-index:300;box-shadow:4px 0 24px rgba(12,36,97,.25)}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.sb-icon-wrap{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--b6),var(--b5));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 4px 12px rgba(37,99,235,.4)}
+.sb-brand{font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:700;color:#fff;line-height:1.25;text-align:center}
+.sb-brand span{display:block;font-size:10px;font-weight:400;color:rgba(255,255,255,.4);margin-top:1px}
+.sb-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.sb-group{font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.28);padding:0 8px;margin:14px 0 4px}
+.sb-link{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);font-size:13px;font-weight:500;color:rgba(255,255,255,.55);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .18s;margin-bottom:2px}
+.sb-link:hover{background:rgba(255,255,255,.08);color:#fff}
+.sb-link.on{background:linear-gradient(90deg,rgba(37,99,235,.9),rgba(59,130,246,.7));color:#fff;font-weight:600;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+.sb-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(255,255,255,.07);flex-shrink:0;transition:background .18s}
+.sb-link.on .sb-ic{background:rgba(255,255,255,.2)}
+.sb-link:hover .sb-ic{background:rgba(255,255,255,.1)}
+.sb-badge{margin-left:auto;background:rgba(255,255,255,.15);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.sb-link.on .sb-badge{background:rgba(255,255,255,.25)}
+.sb-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:8px}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--ok5);flex-shrink:0;box-shadow:0 0 0 2px rgba(34,197,94,.25),0 0 8px rgba(34,197,94,.4)}
+.sb-status{font-size:11px;color:rgba(255,255,255,.35);line-height:1.3}
+
+/* ── TOPBAR ── */
+.topbar{position:fixed;top:0;left:var(--sbw);right:0;height:var(--tbh);background:var(--w);border-bottom:1px solid var(--g2);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:200;box-shadow:var(--sh0)}
+.tb-left{display:flex;align-items:center;gap:12px}
+.tb-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;color:var(--g9)}
+.tb-breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--g4)}
+.tb-breadcrumb span{color:var(--g3)}
+.tb-right{display:flex;align-items:center;gap:8px}
+.tb-date{font-size:11.5px;color:var(--g4);background:var(--g1);padding:5px 10px;border-radius:6px;border:1px solid var(--g2)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:all .18s;font-family:'Inter',sans-serif;white-space:nowrap}
+.btn-primary{background:var(--b6);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.btn-primary:hover{background:var(--b7);box-shadow:0 4px 16px rgba(37,99,235,.4);transform:translateY(-1px)}
+.btn-secondary{background:var(--w);color:var(--g6);border:1.5px solid var(--g2)}
+.btn-secondary:hover{background:var(--g0);border-color:var(--g3);color:var(--g9)}
+.btn-ghost{background:transparent;color:var(--g5);padding:7px 10px}
+.btn-ghost:hover{background:var(--g1);color:var(--g9)}
+.btn-danger{background:var(--err1);color:var(--err7);border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:#fca5a5}
+.btn-sm{padding:6px 12px;font-size:12px}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sbw);margin-top:var(--tbh);min-height:calc(100vh - var(--tbh))}
+.panel{display:none;padding:24px;animation:fadeIn .22s ease}
+.panel.on{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── PAGE HEADER ── */
+.ph{margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ph-left{}
+.ph-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:20px;font-weight:800;color:var(--g9);line-height:1.2}
+.ph-sub{font-size:12.5px;color:var(--g4);margin-top:4px;line-height:1.5}
+.ph-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* ── FILTER BAR ── */
+.filter-bar{background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);padding:14px 18px;margin-bottom:20px;box-shadow:var(--sh0);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filter-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--g4);flex-shrink:0;display:flex;align-items:center;gap:5px}
+.filter-sep{width:1px;height:22px;background:var(--g2);flex-shrink:0}
+.fsel{padding:7px 11px;border:1.5px solid var(--g2);border-radius:var(--r);font-size:12.5px;font-family:'Inter',sans-serif;color:var(--g7);background:var(--g0);cursor:pointer;outline:none;transition:border .18s,box-shadow .18s;min-width:160px;font-weight:500}
+.fsel:focus{border-color:var(--b5);box-shadow:0 0 0 3px rgba(59,130,246,.14)}
+.fsel:hover{border-color:var(--g3)}
+.fsearch-wrap{position:relative;display:flex;align-items:center}
+.fsearch-ic{position:absolute;left:10px;color:var(--g4);font-size:13px;pointer-events:none}
+.fsearch{padding-left:30px !important;min-width:185px}
+.filter-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
+.active-pill{display:inline-flex;align-items:center;gap:5px;background:var(--b0);color:var(--b6);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--b1)}
+.active-pill .dot{width:5px;height:5px;border-radius:50%;background:var(--b5)}
+.clear-btn{font-size:11.5px;color:var(--g4);cursor:pointer;background:var(--g1);border:1px solid var(--g2);display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:6px;transition:all .15s;font-family:'Inter',sans-serif;font-weight:500}
+.clear-btn:hover{background:var(--err1);color:var(--err7);border-color:rgba(239,68,68,.3)}
+
+/* ── STAT CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:1100px){.stats-grid{grid-template-columns:1fr 1fr}}
+
+.scard{
+  background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);
+  box-shadow:var(--sh0);overflow:hidden;transition:box-shadow .25s,transform .25s;
+  position:relative;cursor:default;display:flex;flex-direction:column;
+}
+.scard:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+
+/* left accent stripe */
+.scard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--rl) 0 0 var(--rl)}
+.scard-blue::before{background:linear-gradient(180deg,var(--b6),var(--b4))}
+.scard-green::before{background:linear-gradient(180deg,var(--ok5),#4ade80)}
+.scard-red::before{background:linear-gradient(180deg,var(--err5),#f87171)}
+.scard-purple::before{background:linear-gradient(180deg,var(--pur5),#a78bfa)}
+
+.scard-inner{padding:16px 18px 14px 22px;flex:1;display:flex;flex-direction:column;gap:0}
+
+/* header row: icon + badge */
+.scard-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.scard-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.scard-blue .scard-icon{background:var(--b0)}
+.scard-green .scard-icon{background:var(--ok1)}
+.scard-red .scard-icon{background:var(--err1)}
+.scard-purple .scard-icon{background:var(--pur1)}
+
+.scard-badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.02em}
+.badge-blue{background:var(--b0);color:var(--b6);border:1px solid var(--b1)}
+.badge-green{background:var(--ok1);color:var(--ok7);border:1px solid rgba(34,197,94,.2)}
+.badge-red{background:var(--err1);color:var(--err7);border:1px solid rgba(239,68,68,.2)}
+.badge-purple{background:var(--pur1);color:var(--pur7);border:1px solid rgba(139,92,246,.2)}
+.badge-warn{background:var(--warn1);color:var(--warn7);border:1px solid rgba(245,158,11,.2)}
+
+/* main number */
+.scard-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--g4);margin-bottom:3px}
+.scard-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:32px;font-weight:800;color:var(--g9);line-height:1;letter-spacing:-1.5px;margin-bottom:5px;transition:color .3s}
+.scard-desc{font-size:12px;color:var(--g5);line-height:1.45;margin-bottom:10px}
+
+/* mini progress ring + bar row */
+.scard-prog-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.scard-prog-track{flex:1;height:6px;background:var(--g1);border-radius:99px;overflow:hidden}
+.scard-prog-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.25,.46,.45,.94)}
+.scard-blue .scard-prog-fill{background:linear-gradient(90deg,var(--b6),var(--b4))}
+.scard-green .scard-prog-fill{background:linear-gradient(90deg,var(--ok5),#4ade80)}
+.scard-red .scard-prog-fill{background:linear-gradient(90deg,var(--err5),#f87171)}
+.scard-purple .scard-prog-fill{background:linear-gradient(90deg,var(--pur5),#a78bfa)}
+.scard-prog-val{font-size:11px;font-weight:700;min-width:32px;text-align:right;font-variant-numeric:tabular-nums;color:var(--g5)}
+
+/* bottom divider + secondary stat */
+.scard-footer{border-top:1px solid var(--g1);padding:9px 18px 9px 22px;display:flex;align-items:center;justify-content:space-between;background:var(--g0)}
+.scard-foot-label{font-size:11px;color:var(--g4);display:flex;align-items:center;gap:4px}
+.scard-foot-val{font-size:11.5px;font-weight:700;color:var(--g7);font-variant-numeric:tabular-nums}
+
+/* filter note */
+.scard-note{font-size:10px;font-weight:600;color:var(--b6);display:none;align-items:center;gap:3px}
+.scard-note.on{display:flex}
+
+
+/* ── SECTION LABEL ── */
+.sec-label{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec-label-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:800;color:var(--g7);white-space:nowrap}
+.sec-label-line{flex:1;height:1px;background:var(--g2)}
+.sec-label-count{font-size:11px;font-weight:600;color:var(--g4);background:var(--g1);padding:2px 8px;border-radius:20px;border:1px solid var(--g2)}
+
+/* ── KPI BREAKDOWN BAR ── */
+.kpi-breakdown{background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);padding:18px 20px;margin-bottom:22px;box-shadow:var(--sh0)}
+.kpi-breakdown-title{font-size:12px;font-weight:700;color:var(--g7);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.kpi-breakdown-body{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media(max-width:1000px){.kpi-breakdown-body{grid-template-columns:repeat(3,1fr)}}
+.kpi-metric{display:flex;flex-direction:column;gap:5px}
+.kpi-metric-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--g4)}
+.kpi-metric-val{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;color:var(--g9);letter-spacing:-.3px}
+.kpi-metric-bar{height:5px;background:var(--g1);border-radius:99px;overflow:hidden;margin-top:2px}
+.kpi-metric-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.25,.46,.45,.94)}
+.kpi-metric-sub{font-size:10px;color:var(--g4);margin-top:1px}
+
+/* ── BEST PERFORMANCE ── */
+.best-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:900px){.best-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:580px){.best-grid{grid-template-columns:1fr}}
+
+.best-card{background:var(--w);border:1.5px solid var(--g2);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh0);transition:box-shadow .2s,transform .2s;position:relative}
+.best-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+.best-card.gold{border-color:#f0c040}
+.best-card.silver{border-color:#b8c0cc}
+.best-card.bronze{border-color:#d4956a}
+.best-card-header{padding:16px 16px 12px;position:relative}
+.best-card.gold .best-card-header{background:linear-gradient(135deg,#fffbeb,#fff)}
+.best-card.silver .best-card-header{background:linear-gradient(135deg,#f6f8fb,#fff)}
+.best-card.bronze .best-card-header{background:linear-gradient(135deg,#fff8f0,#fff)}
+.best-rank{position:absolute;top:12px;right:12px;font-size:22px}
+.best-av{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.best-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;color:var(--g9);margin-bottom:1px}
+.best-meta{font-size:11px;color:var(--g4)}
+.best-score-row{display:flex;align-items:baseline;gap:5px;margin:10px 0 4px}
+.best-score-num{font-family:'Plus Jakarta Sans',sans-serif;font-size:36px;font-weight:800;line-height:1;letter-spacing:-2px}
+.gold .best-score-num{color:#92700a}
+.silver .best-score-num{color:var(--g5)}
+.bronze .best-score-num{color:#7c4a1a}
+.best-score-unit{font-size:15px;font-weight:700;color:var(--g4)}
+.best-score-label{font-size:11px;color:var(--g4);font-weight:500}
+.best-card-body{padding:12px 16px 14px;border-top:1px solid var(--g1)}
+.best-kpi-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
+.best-kpi-label{color:var(--g5)}
+.best-kpi-val{font-weight:700;color:var(--g7);font-variant-numeric:tabular-nums}
+.best-kpi-val.hi{color:var(--ok7)}
+.best-kpi-val.lo{color:var(--err7)}
+.best-achieve-bar{margin-top:10px}
+.best-achieve-label{display:flex;justify-content:space-between;font-size:11px;color:var(--g4);margin-bottom:4px}
+.best-achieve-track{height:6px;background:var(--g1);border-radius:99px;overflow:hidden}
+.best-achieve-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--ok5),#4ade80);transition:width .8s}
+
+/* ── TABLE CARD ── */
+.table-card{background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);box-shadow:var(--sh0);overflow:hidden}
+.table-card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--g1)}
+.table-card-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:800;color:var(--g9);display:flex;align-items:center;gap:8px}
+.tbl-count{font-size:11px;font-weight:700;padding:2px 9px;background:var(--b0);color:var(--b6);border-radius:20px;border:1px solid var(--b1)}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--g4);background:var(--g0);border-bottom:1.5px solid var(--g2);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;position:sticky;top:0}
+thead th:hover{color:var(--b6)}
+.sort-ic{opacity:.35;font-size:9px;margin-left:3px;display:inline-block;transition:opacity .15s}
+thead th:hover .sort-ic{opacity:.7}
+.sort-active{color:var(--b6) !important}
+.sort-active .sort-ic{opacity:1}
+tbody tr{border-bottom:1px solid var(--g1);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--b0)}
+tbody td{padding:11px 14px;font-size:12.5px;color:var(--g6);vertical-align:middle;white-space:nowrap}
+
+.agent-cell{display:flex;align-items:center;gap:9px}
+.av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#fff;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif}
+.av-name{font-weight:600;font-size:13px;color:var(--g9)}
+.av-sub{font-size:10.5px;color:var(--g4)}
+.num{font-variant-numeric:tabular-nums;font-weight:500}
+.num-strong{font-weight:700;color:var(--g9)}
+
+.prog-cell{display:flex;align-items:center;gap:8px;min-width:120px}
+.prog-track{flex:1;height:6px;background:var(--g2);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width .6s}
+.prog-label{font-size:12px;font-weight:700;min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-ok{background:var(--ok1);color:var(--ok7)}
+.badge-fail{background:var(--err1);color:var(--err7)}
+.badge-warn{background:var(--warn1);color:var(--warn7)}
+
+.action-cell{display:flex;gap:5px}
+.act-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;border:1.5px solid var(--g2);background:var(--w);color:var(--g5);transition:all .15s}
+.act-btn:hover{background:var(--b0);border-color:var(--b3);color:var(--b6)}
+.act-btn.del:hover{background:var(--err1);border-color:rgba(239,68,68,.3);color:var(--err7)}
+
+.empty-state{padding:52px 20px;text-align:center;color:var(--g4)}
+.empty-icon{font-size:40px;opacity:.3;margin-bottom:12px}
+.empty-state p{font-size:13px;margin-bottom:16px}
+
+.table-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--g1);font-size:12px;color:var(--g4);background:var(--g0)}
+
+/* ── AGENT CARDS ── */
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.agent-card{background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh0);transition:box-shadow .2s,transform .2s}
+.agent-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.agent-card-top{padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--g1)}
+.agent-av-lg{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
+.agent-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;color:var(--g9)}
+.agent-meta{font-size:11px;color:var(--g4);margin-top:1px}
+.agent-score-pill{margin-left:auto;padding:5px 12px;border-radius:20px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;display:flex;align-items:center}
+.agent-kpi-list{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.agent-kpi-item{display:flex;align-items:center;gap:8px}
+.agent-kpi-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.agent-kpi-label{font-size:12px;color:var(--g5);flex:1}
+.agent-kpi-val{font-size:12.5px;font-weight:700;color:var(--g8)}
+.agent-kpi-val.hi{color:var(--ok7)}
+.agent-kpi-val.lo{color:var(--err7)}
+.agent-prog-wrap{padding:0 16px 14px}
+.agent-prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--g4);margin-bottom:5px}
+.agent-prog-track{height:7px;background:var(--g1);border-radius:99px;overflow:hidden}
+.agent-prog-fill{height:100%;border-radius:99px;transition:width .8s}
+
+/* ── CLOUD / KELOLA ── */
+.info-card{background:var(--w);border:1px solid var(--g2);border-radius:var(--rl);padding:20px;margin-bottom:16px;box-shadow:var(--sh0)}
+.info-card-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:800;color:var(--g9);display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.info-card ol{padding-left:18px;font-size:12.5px;color:var(--g5);line-height:2.2}
+.info-card ol a{color:var(--b6);text-decoration:none;font-weight:500}
+.info-card ol a:hover{text-decoration:underline}
+code{font-family:ui-monospace,monospace;font-size:11.5px;background:var(--g1);padding:1px 6px;border-radius:4px;color:var(--b7)}
+.warning-box{background:var(--warn1);border:1px solid rgba(245,158,11,.3);border-radius:var(--rm);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.warning-box-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.warning-box-text{font-size:12.5px;color:var(--warn7);line-height:1.5}
+
+/* ── MODAL ── */
+.modal-wrap{position:fixed;inset:0;background:rgba(12,36,97,.5);backdrop-filter:blur(6px);z-index:600;display:none;align-items:flex-start;justify-content:center;padding:36px 16px;overflow-y:auto}
+.modal-wrap.open{display:flex}
+.modal{background:var(--w);border-radius:var(--rxl);width:100%;max-width:700px;box-shadow:var(--sh3);animation:mIn .22s ease}
+@keyframes mIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:22px 26px;border-bottom:1px solid var(--g1)}
+.modal-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;color:var(--g9)}
+.modal-sub{font-size:12px;color:var(--g4);margin-top:2px}
+.modal-close{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--g4);background:none;border:none;font-size:18px;transition:all .15s}
+.modal-close:hover{background:var(--g1);color:var(--g9)}
+.modal-body{padding:22px 26px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:18px 26px;border-top:1px solid var(--g1)}
+.form-section{margin-bottom:22px}
+.form-sec-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--b6);margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.form-sec-title::after{content:'';flex:1;height:1px;background:var(--b1)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg.full{grid-column:1/-1}
+label{font-size:11.5px;font-weight:600;color:var(--g6)}
+input,select,textarea{padding:8px 11px;border:1.5px solid var(--g2);border-radius:var(--r);font-size:13px;font-family:'Inter',sans-serif;color:var(--g9);background:var(--w);outline:none;transition:border .18s,box-shadow .18s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--b5);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+input::placeholder{color:var(--g3)}
+.form-hint{font-size:10.5px;color:var(--g4);margin-top:2px}
+
+/* ── TOOLTIP ── */
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--g9);color:#fff;font-size:11px;padding:5px 9px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:100;box-shadow:var(--sh2)}
+
+/* ── SUPABASE SETUP ── */
+.supa-setup{background:var(--w);border:1.5px solid var(--b1);border-radius:var(--rl);padding:20px;margin-bottom:16px;box-shadow:var(--sh0)}
+.supa-setup.connected{border-color:rgba(34,197,94,.4);background:linear-gradient(135deg,#f0fdf4,#fff)}
+.supa-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:800;color:var(--g9);display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.supa-sub{font-size:12px;color:var(--g5);margin-bottom:16px;line-height:1.5}
+.supa-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:640px){.supa-fields{grid-template-columns:1fr}}
+.supa-field{display:flex;flex-direction:column;gap:4px}
+.supa-field label{font-size:11.5px;font-weight:600;color:var(--g6)}
+.supa-field input{padding:8px 11px;border:1.5px solid var(--g2);border-radius:var(--r);font-size:12.5px;font-family:'Inter',sans-serif;color:var(--g9);background:var(--g0);outline:none;transition:border .18s,box-shadow .18s}
+.supa-field input:focus{border-color:var(--b5);box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+.supa-field input.err{border-color:var(--err5)}
+.supa-field .hint{font-size:10.5px;color:var(--g4);margin-top:2px}
+.supa-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.supa-status{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px}
+.supa-status.idle{background:var(--g1);color:var(--g5)}
+.supa-status.ok{background:var(--ok1);color:var(--ok7)}
+.supa-status.err{background:var(--err1);color:var(--err7)}
+.supa-status.loading{background:var(--b0);color:var(--b6)}
+.supa-status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.supa-status.ok .supa-status-dot{background:var(--ok5);box-shadow:0 0 0 2px rgba(34,197,94,.25)}
+.supa-status.err .supa-status-dot{background:var(--err5)}
+.supa-status.loading .supa-status-dot{background:var(--b5);animation:pulse 1s infinite}
+.supa-status.idle .supa-status-dot{background:var(--g4)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.supa-last-sync{font-size:11px;color:var(--g4);margin-top:8px}
+.sync-banner{position:fixed;bottom:20px;right:20px;background:var(--g9);color:#fff;padding:10px 16px;border-radius:var(--rm);font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:var(--sh3);z-index:400;transition:all .3s;transform:translateY(0)}
+.sync-banner.hidden{transform:translateY(80px);opacity:0;pointer-events:none}
+.sync-banner.ok{background:var(--ok7)}
+.sync-banner.err{background:var(--err7)}
+
+.sparkline{display:flex;align-items:flex-end;gap:3px;height:32px}
+.spark-bar{flex:1;border-radius:3px 3px 0 0;min-width:6px;transition:height .5s,opacity .2s}
+.spark-bar:hover{opacity:.8}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spin"></div>
+  <div class="load-title">CS Performance Dashboard</div>
+  <div class="load-sub">Memuat data KPI agen…</div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-logo" style="flex-direction:column;align-items:center;padding:18px 16px 14px;gap:8px">
+    <img src="data:image/jpeg;base64,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" alt="CS Logo" style="width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(0,0,0,.25))"/>
+    <div class="sb-brand" style="text-align:center">CS Performance<span>Agent KPI Tracker · 2026</span></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-group">Dashboard</div>
+    <button class="sb-link on" onclick="switchTab('overview',this)"><div class="sb-ic">🏠</div>Overview<span class="sb-badge" id="sbBadgeTotal">0</span></button>
+    <button class="sb-link" onclick="switchTab('per-agen',this)"><div class="sb-ic">👥</div>Per Agen<span class="sb-badge" id="sbBadgeAgen">0</span></button>
+    <button class="sb-link" onclick="switchTab('detail',this)"><div class="sb-ic">📋</div>Detail Data</button>
+    <div class="sb-group" style="margin-top:18px">Sistem</div>
+    <button class="sb-link" onclick="switchTab('kelola',this)"><div class="sb-ic">⚙️</div>Kelola Data</button>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-dot" id="stDot"></div>
+    <div class="sb-status" id="stTxt">Mendeteksi…<br><span style="font-size:9.5px;color:rgba(255,255,255,.22)" id="stSub"></span></div>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-left">
+    <img src="data:image/jpeg;base64,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" alt="CS" style="width:32px;height:32px;object-fit:contain;margin-right:4px"/>
+    <div class="tb-title" id="tbTitle">Overview</div>
+    <div class="tb-breadcrumb"><span>·</span> CS Agent Performance Dashboard</div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-date" id="tbDate">—</div>
+    <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">+ Tambah Data</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div class="panel on" id="panel-overview">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Dashboard Overview</div>
+        <div class="ph-sub">Semua angka & grafik di bawah ini <strong>responsif terhadap filter</strong> yang aktif — pilih periode atau agen untuk memperinci Data.</div>
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <span class="filter-title">🔽 Filter Data</span>
+      <div class="filter-sep"></div>
+      <select class="fsel" id="fPeriode" onchange="applyFilter()"><option value="">Semua Periode</option></select>
+      <select class="fsel" id="fAgen"    onchange="applyFilter()"><option value="">Semua Agen</option></select>
+      <select class="fsel" id="fStatus"  onchange="applyFilter()">
+        <option value="">Semua Status</option>
+        <option value="Achieved">✅ Achieved</option>
+        <option value="Not Achieved">❌ Not Achieved</option>
+      </select>
+      <div class="fsearch-wrap">
+        <span class="fsearch-ic">🔍</span>
+        <input type="text" class="fsel fsearch" id="fSearch" placeholder="Cari nama agen…" oninput="applyFilter()"/>
+      </div>
+      <div class="filter-actions">
+        <span class="active-pill" id="activePill" style="display:none"><span class="dot"></span>Filter aktif</span>
+        <button class="clear-btn" id="clearBtn" style="display:none" onclick="clearFilter()">✕ Reset Filter</button>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+
+      <!-- TOTAL ENTRI -->
+      <div class="scard scard-blue">
+        <div class="scard-inner">
+          <div class="scard-head">
+            <div class="scard-icon">📋</div>
+            <span class="scard-badge badge-blue" id="trendTotal">16 entri</span>
+          </div>
+          <div class="scard-label">Total Entri</div>
+          <div class="scard-value" id="stTotal">0</div>
+          <div class="scard-desc" id="stTotalDesc">Data performa agen tercatat</div>
+          <div class="scard-prog-row">
+            <div class="scard-prog-track"><div class="scard-prog-fill" id="progTotal" style="width:0%"></div></div>
+            <span class="scard-prog-val" id="progTotalVal">—</span>
+          </div>
+          <div class="scard-note" id="stTotalNote">🔽 filter aktif</div>
+        </div>
+        <div class="scard-footer">
+          <span class="scard-foot-label">👥 Jumlah Agen</span>
+          <span class="scard-foot-val" id="stFootAgents">—</span>
+        </div>
+      </div>
+
+      <!-- ACHIEVED -->
+      <div class="scard scard-green">
+        <div class="scard-inner">
+          <div class="scard-head">
+            <div class="scard-icon">✅</div>
+            <span class="scard-badge badge-green" id="trendAch">—</span>
+          </div>
+          <div class="scard-label">Achieved</div>
+          <div class="scard-value" id="stAch">0</div>
+          <div class="scard-desc" id="stAchDesc">Grand Total ≥ 90% (target)</div>
+          <div class="scard-prog-row">
+            <div class="scard-prog-track"><div class="scard-prog-fill" id="progAch" style="width:0%"></div></div>
+            <span class="scard-prog-val" id="progAchVal">—</span>
+          </div>
+          <div class="scard-note" id="stAchNote">🔽 filter aktif</div>
+        </div>
+        <div class="scard-footer">
+          <span class="scard-foot-label">📊 Tingkat keberhasilan</span>
+          <span class="scard-foot-val" id="stFootAchRate">—</span>
+        </div>
+      </div>
+
+      <!-- NOT ACHIEVED -->
+      <div class="scard scard-red">
+        <div class="scard-inner">
+          <div class="scard-head">
+            <div class="scard-icon">⚠️</div>
+            <span class="scard-badge badge-red" id="trendFail">—</span>
+          </div>
+          <div class="scard-label">Not Achieved</div>
+          <div class="scard-value" id="stFail">0</div>
+          <div class="scard-desc" id="stFailDesc">Grand Total &lt; 90% (perlu perhatian)</div>
+          <div class="scard-prog-row">
+            <div class="scard-prog-track"><div class="scard-prog-fill" id="progFail" style="width:0%"></div></div>
+            <span class="scard-prog-val" id="progFailVal">—</span>
+          </div>
+          <div class="scard-note" id="stFailNote">🔽 filter aktif</div>
+        </div>
+        <div class="scard-footer">
+          <span class="scard-foot-label">📉 Rata-rata skor gagal</span>
+          <span class="scard-foot-val" id="stFootFailAvg">—</span>
+        </div>
+      </div>
+
+      <!-- AVG GRAND TOTAL -->
+      <div class="scard scard-purple">
+        <div class="scard-inner">
+          <div class="scard-head">
+            <div class="scard-icon">📈</div>
+            <span class="scard-badge" id="trendAvg" style="font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px">—</span>
+          </div>
+          <div class="scard-label">Avg Grand Total</div>
+          <div class="scard-value" id="stAvg">–</div>
+          <div class="scard-desc" id="stAvgDesc">Rata-rata skor seluruh agen</div>
+          <div class="scard-prog-row">
+            <div class="scard-prog-track"><div class="scard-prog-fill" id="progAvg" style="width:0%"></div></div>
+            <span class="scard-prog-val" id="progAvgVal">Target 90%</span>
+          </div>
+          <div class="scard-note" id="stAvgNote">🔽 filter aktif</div>
+        </div>
+        <div class="scard-footer">
+          <span class="scard-foot-label">🎯 Gap ke target</span>
+          <span class="scard-foot-val" id="stFootGap">—</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- KPI BREAKDOWN -->
+    <div class="kpi-breakdown" id="kpiBreakdown">
+      <div class="kpi-breakdown-title">📐 Rata-rata KPI Metrics <span style="font-size:10.5px;font-weight:400;color:var(--g4);margin-left:4px">(dari data terfilter)</span></div>
+      <div class="kpi-breakdown-body" id="kpiBreakdownBody"></div>
+    </div>
+
+    <!-- BEST PERFORMANCE -->
+    <div class="sec-label">
+      <span class="sec-label-text">🏆 Best Performance</span>
+      <div class="sec-label-line"></div>
+      <span class="sec-label-count" id="bestCount">—</span>
+    </div>
+    <div class="best-grid" id="bestGrid"></div>
+
+    <!-- TABLE -->
+    <div class="sec-label">
+      <span class="sec-label-text">📋 Performance Table</span>
+      <div class="sec-label-line"></div>
+      <span class="sec-label-count" id="tblCountLabel">0 data</span>
+    </div>
+    <div class="table-card">
+      <div class="table-card-head">
+        <div class="table-card-title">Data Performa Agen <span class="tbl-count" id="ovCount">0</span></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th onclick="sortTable('periode')" id="th-periode">Periode <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('nama')" id="th-nama">Agen <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('frSLA')" id="th-frSLA">FR SLA <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('resTime')" id="th-resTime">Res. Time <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('fcr')" id="th-fcr">FCR <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('csat')" id="th-csat">CSAT <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('qaScore')" id="th-qaScore">QA Score <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('attendance')" id="th-attendance">Attendance <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('totalPct')" id="th-totalPct">Total % <span class="sort-ic">↕</span></th>
+            <th onclick="sortTable('grandTotal')" id="th-grandTotal">Grand Total <span class="sort-ic">↕</span></th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr></thead>
+          <tbody id="ovTbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="ovEmpty" style="display:none"><div class="empty-icon">🔍</div><p>Tidak ada data yang cocok dengan filter aktif</p><button class="btn btn-ghost btn-sm" onclick="clearFilter()">Reset Filter</button></div>
+      <div class="table-foot" id="ovFoot" style="display:none">
+        <span id="footInfo">–</span>
+        <div style="display:flex;gap:4px" id="pagPages"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PER AGEN ═══ -->
+  <div class="panel" id="panel-per-agen">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Performa Per Agen</div>
+        <div class="ph-sub">Ringkasan KPI dan tren performa tiap individu agen CS</div>
+      </div>
+    </div>
+    <div class="agent-grid" id="agentGrid"></div>
+  </div>
+
+  <!-- ═══ DETAIL ═══ -->
+  <div class="panel" id="panel-detail">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Detail Data KPI</div>
+        <div class="ph-sub">Seluruh kolom KPI per agen per periode</div>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-title">🔽 Filter</span>
+      <div class="filter-sep"></div>
+      <select class="fsel" id="dtPeriode" onchange="renderDetail()"><option value="">Semua Periode</option></select>
+      <div class="fsearch-wrap" style="margin-left:auto">
+        <span class="fsearch-ic">🔍</span>
+        <input type="text" class="fsel fsearch" id="dtSearch" placeholder="Cari agen…" oninput="renderDetail()"/>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-card-head">
+        <div class="table-card-title">Detail Lengkap <span class="tbl-count" id="dtCount">0</span></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>No</th><th>Agen</th><th>G</th><th>Periode</th>
+            <th>FR SLA</th><th>Poin</th><th>%</th>
+            <th>Res. Time</th><th>Poin</th><th>%</th>
+            <th>FCR</th><th>Poin</th><th>%</th>
+            <th>CSAT</th><th>Poin</th><th>%</th>
+            <th>QA</th><th>Poin</th><th>%</th>
+            <th>Attend.</th><th>Poin</th><th>%</th>
+            <th>Total %</th><th>Grand Total</th><th>Status</th><th>Aksi</th>
+          </tr></thead>
+          <tbody id="dtTbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="dtEmpty" style="display:none"><div class="empty-icon">📋</div><p>Belum ada data</p></div>
+    </div>
+  </div>
+
+  <!-- ═══ KELOLA ═══ -->
+  <div class="panel" id="panel-kelola">
+    <div class="ph">
+      <div class="ph-left">
+        <div class="ph-title">Kelola Data & Sinkronisasi</div>
+        <div class="ph-sub">Hubungkan ke Supabase agar dashboard bisa dibuka dan diupdate dari device manapun secara otomatis</div>
+      </div>
+    </div>
+
+    <!-- SUPABASE SETUP -->
+    <div class="supa-setup" id="supaCard">
+      <div class="supa-title">☁️ Supabase Cloud Sync <span id="supaConnBadge" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:var(--g1);color:var(--g5)">Belum terhubung</span></div>
+      <div class="supa-sub">Masukkan kredensial Supabase kamu. Data akan otomatis tersinkron antar semua device secara real-time. Credentials disimpan di localStorage browser ini.</div>
+      <div class="supa-fields">
+        <div class="supa-field" style="grid-column:1/-1">
+          <label>Supabase Project URL</label>
+          <input type="text" id="supaUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" oninput="supaCredsChanged()"/>
+          <span class="hint">Dari: Supabase Dashboard → Settings → API → Project URL</span>
+        </div>
+        <div class="supa-field">
+          <label>Anon / Public API Key</label>
+          <input type="text" id="supaKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..." oninput="supaCredsChanged()"/>
+          <span class="hint">Settings → API → anon public key</span>
+        </div>
+        <div class="supa-field">
+          <label>Nama Tabel</label>
+          <input type="text" id="supaTable" placeholder="kpi_data" value="kpi_data" oninput="supaCredsChanged()"/>
+          <span class="hint">Nama tabel yang dibuat di Supabase</span>
+        </div>
+      </div>
+      <div class="supa-actions">
+        <button class="btn btn-primary btn-sm" onclick="supaConnect()">🔗 Uji Koneksi & Simpan</button>
+        <button class="btn btn-secondary btn-sm" onclick="supaPush()">⬆ Push Data ke Cloud</button>
+        <button class="btn btn-secondary btn-sm" onclick="supaPull()">⬇ Pull Data dari Cloud</button>
+        <div class="supa-status idle" id="supaStatusBadge"><div class="supa-status-dot"></div><span id="supaStatusTxt">Belum terhubung</span></div>
+      </div>
+      <div class="supa-last-sync" id="supaLastSync"></div>
+    </div>
+
+    <!-- PANDUAN SETUP -->
+    <div class="info-card" id="supaGuide">
+      <div class="info-card-title">📖 Panduan Setup Supabase (5 menit)</div>
+      <ol style="padding-left:18px;font-size:12.5px;color:var(--g5);line-height:2.4">
+        <li>Buka <a href="https://supabase.com" target="_blank" style="color:var(--b6);font-weight:600">supabase.com</a> → Daftar / Login (gratis)</li>
+        <li>Klik <strong>New Project</strong> → isi nama & password → Create</li>
+        <li>Setelah project siap, buka <strong>SQL Editor</strong> dan jalankan query ini:<br>
+          <div style="background:var(--g9);color:#e2e8f0;border-radius:var(--r);padding:12px 14px;margin:8px 0;font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.8;overflow-x:auto">
+            <span style="color:#93c5fd">create table</span> kpi_data (<br>
+            &nbsp;&nbsp;id <span style="color:#86efac">bigint</span> generated always as identity primary key,<br>
+            &nbsp;&nbsp;data <span style="color:#86efac">jsonb</span> not null,<br>
+            &nbsp;&nbsp;updated_at <span style="color:#86efac">timestamptz</span> default now()<br>
+            );<br>
+            <span style="color:#93c5fd">insert into</span> kpi_data (data) <span style="color:#93c5fd">values</span> (<span style="color:#fbbf24">'[]'</span>::jsonb);
+          </div>
+        </li>
+        <li>Buka <strong>Settings → API</strong> → copy <strong>Project URL</strong> dan <strong>anon public key</strong></li>
+        <li>Paste di kolom di atas → klik <strong>Uji Koneksi & Simpan</strong></li>
+        <li>Klik <strong>Push Data ke Cloud</strong> untuk upload data lokal pertama kali</li>
+        <li>✅ Selesai! Dashboard sekarang sync otomatis setiap kali ada perubahan data</li>
+      </ol>
+    </div>
+
+    <!-- DATA LOKAL -->
+    <div class="info-card">
+      <div class="info-card-title">💾 Manajemen Data Lokal</div>
+      <p style="font-size:12.5px;color:var(--g5);margin-bottom:14px">Data juga selalu dicache di localStorage browser sebagai fallback offline.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="openModal()">+ Tambah Data KPI</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-danger btn-sm" onclick="resetData()">🗑 Reset ke Data Awal</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- SYNC BANNER -->
+<div class="sync-banner hidden" id="syncBanner">
+  <span id="syncBannerIcon">☁️</span>
+  <span id="syncBannerTxt">Menyinkronkan…</span>
+</div>
+
+<!-- MODAL -->
+<div class="modal-wrap" id="modalWrap" onclick="handleModalClick(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="modal-title" id="mTitle">Tambah Data KPI</div><div class="modal-sub">Lengkapi seluruh field performa agen untuk periode ini</div></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="kpiForm" onsubmit="saveData(event)">
+        <div class="form-section">
+          <div class="form-sec-title">🪪 Identitas Agen</div>
+          <div class="form-grid">
+            <div class="fg"><label>Periode *</label><input type="text" id="fPeriodeVal" placeholder="cth: 1 April - 15 April 2026" required/></div>
+            <div class="fg"><label>Nama Lengkap *</label><input type="text" id="fNama" placeholder="Nama lengkap agen" required/></div>
+            <div class="fg"><label>Jabatan</label><input type="text" id="fJabatan" placeholder="cth: CS"/></div>
+            <div class="fg"><label>Gender</label><select id="fGender"><option value="L">Laki-laki (L)</option><option value="P">Perempuan (P)</option></select></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-sec-title">📡 Service Performance</div>
+          <div class="form-grid">
+            <div class="fg"><label>FR SLA (%)</label><input type="text" id="fFrSLA" placeholder="cth: 93.02"/><div class="form-hint">Target: ≥ 95%</div></div>
+            <div class="fg"><label>FR SLA Poin</label><input type="number" id="fFrSLAPoin" placeholder="0–5"/></div>
+            <div class="fg"><label>FR SLA % Kontribusi</label><input type="text" id="fFrSLAPct" placeholder="cth: 20%"/></div>
+            <div class="fg"><label>Resolution Time</label><input type="text" id="fResTime" placeholder="cth: 1h 5m"/><div class="form-hint">Format: Xh Ym</div></div>
+            <div class="fg"><label>Res. Time Poin</label><input type="number" id="fResTimePoin" placeholder="0–5"/></div>
+            <div class="fg"><label>Res. Time % Kontribusi</label><input type="text" id="fResTimePct" placeholder="cth: 20%"/></div>
+            <div class="fg"><label>FCR</label><input type="text" id="fFCR" placeholder="cth: 91%"/><div class="form-hint">First Contact Resolution</div></div>
+            <div class="fg"><label>FCR Poin</label><input type="number" id="fFCRPoin" placeholder="0–5"/></div>
+            <div class="fg full"><label>FCR % Kontribusi</label><input type="text" id="fFCRPct" placeholder="cth: 10%"/></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-sec-title">🌟 Quality & Discipline</div>
+          <div class="form-grid">
+            <div class="fg"><label>CSAT Score</label><input type="text" id="fCSAT" placeholder="cth: 4.53"/><div class="form-hint">Skala 1–5. Target: ≥ 4.5</div></div>
+            <div class="fg"><label>CSAT Poin</label><input type="number" id="fCSATPoin" placeholder="0–5"/></div>
+            <div class="fg"><label>CSAT % Kontribusi</label><input type="text" id="fCSATPct" placeholder="cth: 20%"/></div>
+            <div class="fg"><label>QA Score</label><input type="number" id="fQA" placeholder="0–100"/><div class="form-hint">Target: ≥ 90</div></div>
+            <div class="fg"><label>QA Poin</label><input type="number" id="fQAPoin" placeholder="0–5"/></div>
+            <div class="fg"><label>QA % Kontribusi</label><input type="text" id="fQAPct" placeholder="cth: 6%"/></div>
+            <div class="fg"><label>Attendance</label><input type="text" id="fAttendance" placeholder="cth: 100%"/><div class="form-hint">Target: ≥ 98%</div></div>
+            <div class="fg"><label>Attendance Poin</label><input type="number" id="fAttendancePoin" placeholder="0–5"/></div>
+            <div class="fg"><label>Attendance % Kontribusi</label><input type="text" id="fAttendancePct" placeholder="cth: 10%"/></div>
+          </div>
+        </div>
+        <div class="form-section" style="margin-bottom:0">
+          <div class="form-sec-title">📊 Summary</div>
+          <div class="form-grid">
+            <div class="fg"><label>Total Poin %</label><input type="text" id="fTotalPct" placeholder="cth: 36%"/><div class="form-hint">Jumlah kontribusi semua KPI</div></div>
+            <div class="fg"><label>Grand Total Performance</label><input type="text" id="fGrandTotal" placeholder="cth: 86"/><div class="form-hint">Skor akhir (0–100). Target: ≥ 90</div></div>
+            <div class="fg full"><label>Status Target</label><select id="fStatus"><option value="Achieved">✅ Achieved (Grand Total ≥ 90)</option><option value="Not Achieved">❌ Not Achieved (Grand Total &lt; 90)</option></select></div>
+          </div>
+        </div>
+        <input type="hidden" id="fEditIdx"/>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary btn-sm" onclick="saveData(event)">💾 Simpan Data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════ DATA ════ */
+const SK='csKPI_data2', DV='v5';
+const SEED=[
+  {periode:'1 Januari - 15 Januari 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'93.02',frSLAPoin:'4',frSLAPct:'20%',resTime:'1h 5m',resTimePoin:'5',resTimePct:'20%',fcr:'91%',fcrPoin:'5',fcrPct:'10%',csat:'4.53',csatPoin:'5',csatPct:'20%',qaScore:'80',qaPoin:'2',qaPct:'6%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'36%',grandTotal:'86',status:'Not Achieved'},
+  {periode:'1 Januari - 15 Januari 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'85.53',frSLAPoin:'1',frSLAPct:'5%',resTime:'2h 7m',resTimePoin:'5',resTimePct:'20%',fcr:'88%',fcrPoin:'5',fcrPct:'10%',csat:'4.48',csatPoin:'4',csatPct:'16%',qaScore:'80',qaPoin:'2',qaPct:'6%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'32%',grandTotal:'67',status:'Not Achieved'},
+  {periode:'16 Januari - 31 Januari 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'95.53',frSLAPoin:'5',frSLAPct:'25%',resTime:'1h 25m',resTimePoin:'5',resTimePct:'20%',fcr:'92%',fcrPoin:'5',fcrPct:'10%',csat:'4.96',csatPoin:'5',csatPct:'20%',qaScore:'69',qaPoin:'1',qaPct:'3%',attendance:'90.91%',attendancePoin:'2',attendancePct:'4%',totalPct:'27%',grandTotal:'82',status:'Not Achieved'},
+  {periode:'16 Januari - 31 Januari 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'90.30',frSLAPoin:'3',frSLAPct:'15%',resTime:'1h 54m',resTimePoin:'5',resTimePct:'20%',fcr:'88%',fcrPoin:'5',fcrPct:'10%',csat:'5',csatPoin:'5',csatPct:'20%',qaScore:'81',qaPoin:'2',qaPct:'6%',attendance:'81.82%',attendancePoin:'1',attendancePct:'2%',totalPct:'28%',grandTotal:'73',status:'Not Achieved'},
+  {periode:'1 Februari - 14 Februari 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'93.18',frSLAPoin:'4',frSLAPct:'20%',resTime:'1h 25m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.75',csatPoin:'5',csatPct:'20%',qaScore:'87',qaPoin:'4',qaPct:'12%',attendance:'60%',attendancePoin:'1',attendancePct:'2%',totalPct:'34%',grandTotal:'84',status:'Not Achieved'},
+  {periode:'1 Februari - 14 Februari 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'88.85',frSLAPoin:'2',frSLAPct:'10%',resTime:'1h 27m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.87',csatPoin:'5',csatPct:'20%',qaScore:'86',qaPoin:'4',qaPct:'12%',attendance:'70%',attendancePoin:'1',attendancePct:'2%',totalPct:'34%',grandTotal:'74',status:'Not Achieved'},
+  {periode:'15 Februari - 28 Februari 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'95.14',frSLAPoin:'5',frSLAPct:'25%',resTime:'1h 30m',resTimePoin:'5',resTimePct:'20%',fcr:'94%',fcrPoin:'5',fcrPct:'10%',csat:'4.82',csatPoin:'5',csatPct:'20%',qaScore:'88',qaPoin:'4',qaPct:'12%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'42%',grandTotal:'97',status:'Achieved'},
+  {periode:'15 Februari - 28 Februari 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'90.84',frSLAPoin:'3',frSLAPct:'15%',resTime:'1h 26m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.67',csatPoin:'5',csatPct:'20%',qaScore:'87',qaPoin:'4',qaPct:'12%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'42%',grandTotal:'87',status:'Not Achieved'},
+  {periode:'1 Maret - 15 Maret 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'88.60',frSLAPoin:'2',frSLAPct:'10%',resTime:'1h 34m',resTimePoin:'5',resTimePct:'20%',fcr:'88%',fcrPoin:'5',fcrPct:'10%',csat:'4.4',csatPoin:'4',csatPct:'16%',qaScore:'86',qaPoin:'3',qaPct:'9%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'35%',grandTotal:'75',status:'Not Achieved'},
+  {periode:'1 Maret - 15 Maret 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'93.36',frSLAPoin:'4',frSLAPct:'20%',resTime:'1h 31m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.74',csatPoin:'5',csatPct:'20%',qaScore:'87',qaPoin:'4',qaPct:'12%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'42%',grandTotal:'92',status:'Achieved'},
+  {periode:'16 Maret - 31 Maret 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'93.64',frSLAPoin:'4',frSLAPct:'20%',resTime:'0h 47m',resTimePoin:'5',resTimePct:'20%',fcr:'88%',fcrPoin:'5',fcrPct:'10%',csat:'4.79',csatPoin:'5',csatPct:'20%',qaScore:'87',qaPoin:'4',qaPct:'12%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'42%',grandTotal:'92',status:'Achieved'},
+  {periode:'16 Maret - 31 Maret 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'94.53',frSLAPoin:'4',frSLAPct:'20%',resTime:'1h 1m',resTimePoin:'5',resTimePct:'20%',fcr:'96%',fcrPoin:'5',fcrPct:'10%',csat:'4.76',csatPoin:'5',csatPct:'20%',qaScore:'90',qaPoin:'5',qaPct:'15%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'45%',grandTotal:'95',status:'Achieved'},
+  {periode:'1 April - 15 April 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'96.85',frSLAPoin:'5',frSLAPct:'25%',resTime:'3h 58m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.73',csatPoin:'5',csatPct:'20%',qaScore:'90',qaPoin:'5',qaPct:'15%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'45%',grandTotal:'100',status:'Achieved'},
+  {periode:'1 April - 15 April 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'91.67',frSLAPoin:'3',frSLAPct:'15%',resTime:'1h 24m',resTimePoin:'5',resTimePct:'20%',fcr:'91%',fcrPoin:'5',fcrPct:'10%',csat:'4.89',csatPoin:'5',csatPct:'20%',qaScore:'90',qaPoin:'5',qaPct:'15%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'45%',grandTotal:'90',status:'Achieved'},
+  {periode:'16 April - 30 April 2026',nama:'Muhammad Daud',jabatan:'CS',gender:'L',frSLA:'89.97',frSLAPoin:'2',frSLAPct:'10%',resTime:'1h 18m',resTimePoin:'2',resTimePct:'20%',fcr:'92%',fcrPoin:'3',fcrPct:'10%',csat:'4.88',csatPoin:'5',csatPct:'20%',qaScore:'80',qaPoin:'2',qaPct:'6%',attendance:'100%',attendancePoin:'5',attendancePct:'10%',totalPct:'36%',grandTotal:'76',status:'Not Achieved'},
+  {periode:'16 April - 30 April 2026',nama:'Ghaida Adnan',jabatan:'CS',gender:'P',frSLA:'92.28',frSLAPoin:'4',frSLAPct:'20%',resTime:'1h 17m',resTimePoin:'5',resTimePct:'20%',fcr:'93%',fcrPoin:'5',fcrPct:'10%',csat:'4.79',csatPoin:'5',csatPct:'20%',qaScore:'90',qaPoin:'5',qaPct:'15%',attendance:'100%',attendancePoin:'4',attendancePct:'10%',totalPct:'45%',grandTotal:'95',status:'Achieved'},
+];
+
+let kpiData=[], sortKey='grandTotal', sortDir=-1, filtered=[];
+
+/* ════ LOCAL STORAGE ════ */
+function loadData(){
+  try{
+    if(localStorage.getItem('csKPI_ver')!==DV){localStorage.removeItem(SK);localStorage.setItem('csKPI_ver',DV);}
+    const r=localStorage.getItem(SK); kpiData=r?JSON.parse(r):[];
+  }catch{kpiData=[];}
+  if(!kpiData.length){kpiData=JSON.parse(JSON.stringify(SEED));saveLocal();}
+}
+function saveLocal(){localStorage.setItem(SK,JSON.stringify(kpiData));}
+
+/* ════ SUPABASE LAYER ════ */
+const SUPA_CREDS_KEY='csKPI_supa_creds';
+
+function getSupaCreds(){
+  try{const c=localStorage.getItem(SUPA_CREDS_KEY);return c?JSON.parse(c):null;}catch{return null;}
+}
+function saveSupaCreds(url,key,table){
+  localStorage.setItem(SUPA_CREDS_KEY,JSON.stringify({url:url.trim(),key:key.trim(),table:(table||'kpi_data').trim()}));
+}
+
+function isSupaConnected(){const c=getSupaCreds();return !!(c?.url&&c?.key);}
+
+function supaCredsChanged(){
+  // reset status when user edits fields
+  setSupaStatus('idle','Edit kredensial…');
+}
+
+async function supaFetch(method,body){
+  const c=getSupaCreds();
+  if(!c?.url||!c?.key)throw new Error('Kredensial belum diisi');
+  const table=c.table||'kpi_data';
+  const url=`${c.url}/rest/v1/${table}`;
+  const headers={'Content-Type':'application/json','apikey':c.key,'Authorization':`Bearer ${c.key}`,'Prefer':'return=representation'};
+  const opts={method,headers};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(url+(method==='GET'?'?select=*&order=id.asc':''),opts);
+  if(!res.ok){const err=await res.text();throw new Error(`HTTP ${res.status}: ${err.slice(0,120)}`);}
+  return method==='DELETE'||method==='PATCH'?null:await res.json();
+}
+
+function setSupaStatus(type,txt){
+  const b=$('supaStatusBadge'),t=$('supaStatusTxt');
+  if(!b||!t)return;
+  b.className='supa-status '+type;
+  t.textContent=txt;
+}
+
+function showBanner(msg,type='ok'){
+  const b=$('syncBanner'),ti=$('syncBannerIcon'),tx=$('syncBannerTxt');
+  b.className='sync-banner '+type;
+  ti.textContent=type==='ok'?'☁️':type==='err'?'❌':'⏳';
+  tx.textContent=msg;
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.classList.add('hidden'),3500);
+}
+
+function updateSupaUI(){
+  const c=getSupaCreds();
+  if(c?.url){$('supaUrl').value=c.url;}
+  if(c?.key){$('supaKey').value=c.key;}
+  if(c?.table){$('supaTable').value=c.table;}
+  const connected=isSupaConnected();
+  const card=$('supaCard');
+  const badge=$('supaConnBadge');
+  if(connected){
+    card.classList.add('connected');
+    badge.style.background='var(--ok1)';badge.style.color='var(--ok7)';badge.textContent='✅ Terhubung';
+  }else{
+    card.classList.remove('connected');
+    badge.style.background='var(--g1)';badge.style.color='var(--g5)';badge.textContent='Belum terhubung';
+  }
+}
+
+async function supaConnect(){
+  const url=$('supaUrl')?.value?.trim();
+  const key=$('supaKey')?.value?.trim();
+  const table=($('supaTable')?.value?.trim())||'kpi_data';
+  if(!url||!key){alert('URL dan API Key harus diisi!');return;}
+  setSupaStatus('loading','Menghubungkan…');
+  try{
+    saveSupaCreds(url,key,table);
+    const rows=await supaFetch('GET');
+    setSupaStatus('ok',`Terhubung · ${rows.length} baris di tabel`);
+    updateSupaUI();
+    showBanner('Koneksi Supabase berhasil!','ok');
+    const lastSync=new Date().toLocaleString('id-ID');
+    if($('supaLastSync'))$('supaLastSync').textContent='Terakhir cek: '+lastSync;
+  }catch(e){
+    setSupaStatus('err','Gagal: '+e.message.slice(0,60));
+    showBanner('Koneksi gagal: '+e.message.slice(0,50),'err');
+  }
+}
+
+async function supaPush(){
+  if(!isSupaConnected()){alert('Hubungkan Supabase dulu di tab Kelola Data!');return;}
+  setSupaStatus('loading','Mengunggah data…');
+  showBanner('⏳ Mengunggah ke Supabase…','loading');
+  try{
+    const c=getSupaCreds();
+    const table=c.table||'kpi_data';
+    // Get existing row id
+    const rows=await supaFetch('GET');
+    const payload={data:kpiData,updated_at:new Date().toISOString()};
+    if(rows.length>0){
+      // PATCH first row
+      const id=rows[0].id;
+      const res=await fetch(`${c.url}/rest/v1/${table}?id=eq.${id}`,{
+        method:'PATCH',headers:{'Content-Type':'application/json','apikey':c.key,'Authorization':`Bearer ${c.key}`,'Prefer':'return=representation'},
+        body:JSON.stringify(payload)
+      });
+      if(!res.ok)throw new Error('PATCH gagal: '+res.status);
+    }else{
+      await supaFetch('POST',payload);
+    }
+    setSupaStatus('ok','Tersinkron · '+new Date().toLocaleTimeString('id-ID'));
+    showBanner(`✅ ${kpiData.length} entri berhasil diunggah`,'ok');
+    if($('supaLastSync'))$('supaLastSync').textContent='Terakhir push: '+new Date().toLocaleString('id-ID');
+    updateStorageStatus();
+  }catch(e){
+    setSupaStatus('err','Push gagal: '+e.message.slice(0,50));
+    showBanner('Push gagal: '+e.message.slice(0,50),'err');
+  }
+}
+
+async function supaPull(){
+  if(!isSupaConnected()){alert('Hubungkan Supabase dulu di tab Kelola Data!');return;}
+  setSupaStatus('loading','Mengunduh data…');
+  showBanner('⏳ Mengunduh dari Supabase…','loading');
+  try{
+    const rows=await supaFetch('GET');
+    if(!rows.length||!rows[0].data){throw new Error('Tabel kosong. Push data dulu dari device pertama.');}
+    const pulled=rows[0].data;
+    if(!Array.isArray(pulled))throw new Error('Format data tidak valid');
+    kpiData=pulled;
+    saveLocal();
+    refreshAll();
+    setSupaStatus('ok',`Berhasil · ${kpiData.length} entri diunduh`);
+    showBanner(`✅ ${kpiData.length} entri berhasil diunduh`,'ok');
+    if($('supaLastSync'))$('supaLastSync').textContent='Terakhir pull: '+new Date().toLocaleString('id-ID');
+    updateStorageStatus();
+  }catch(e){
+    setSupaStatus('err','Pull gagal: '+e.message.slice(0,50));
+    showBanner('Pull gagal: '+e.message.slice(0,50),'err');
+  }
+}
+
+/* Auto-push whenever data changes */
+async function save(){
+  saveLocal();
+  if(isSupaConnected()){
+    // debounced auto-push
+    clearTimeout(save._t);
+    save._t=setTimeout(()=>{
+      supaPush();
+    },1200);
+  }
+}
+
+/* ════ HELPERS ════ */
+const PAL=['#2563eb','#16a34a','#d97706','#7c3aed','#0891b2','#be185d','#65a30d','#dc2626'];
+function ac(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))&0xffffffff;return PAL[Math.abs(h)%PAL.length];}
+function ini(n){return n?n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase():'?';}
+function stripPct(v){if(v===null||v===undefined||v==='')return NaN;return parseFloat(v.toString().replace(/%$/,'').trim());}
+function fmtN(v){const n=stripPct(v);return isNaN(n)?String(v||'—'):n.toLocaleString('id-ID',{maximumFractionDigits:2});}
+function fmtPct(v){const n=stripPct(v);return isNaN(n)?'—':n.toFixed(1)+'%';}
+
+/* ════ FILTER ════ */
+function getFV(){return{p:$('fPeriode')?.value||'',a:$('fAgen')?.value||'',s:$('fStatus')?.value||'',q:($('fSearch')?.value||'').toLowerCase()};}
+function $(id){return document.getElementById(id);}
+function isActive(){const{p,a,s,q}=getFV();return!!(p||a||s||q);}
+
+function buildFiltered(){
+  const{p,a,s,q}=getFV();
+  let d=[...kpiData];
+  if(p)d=d.filter(r=>r.periode===p);
+  if(a)d=d.filter(r=>r.nama===a);
+  if(s)d=d.filter(r=>r.status===s);
+  if(q)d=d.filter(r=>(r.nama||'').toLowerCase().includes(q)||(r.periode||'').toLowerCase().includes(q));
+  if(sortKey){
+    d.sort((x,y)=>{
+      let av=x[sortKey],bv=y[sortKey];
+      const an=stripPct(av),bn=stripPct(bv);
+      if(!isNaN(an)&&!isNaN(bn)){av=an;bv=bn;}
+      return av<bv?-sortDir:av>bv?sortDir:0;
+    });
+  }
+  filtered=d;
+}
+
+function applyFilter(){
+  buildFiltered();
+  const on=isActive();
+  $('activePill').style.display=on?'inline-flex':'none';
+  $('clearBtn').style.display=on?'flex':'none';
+  renderAll();
+}
+function clearFilter(){['fPeriode','fAgen','fStatus','fSearch'].forEach(id=>{const e=$(id);if(e)e.value='';});applyFilter();}
+function sortTable(k){
+  document.querySelectorAll('thead th').forEach(th=>th.classList.remove('sort-active'));
+  const th=$('th-'+k);if(th)th.classList.add('sort-active');
+  sortKey===k?sortDir*=-1:(sortKey=k,sortDir=-1);
+  applyFilter();
+}
+
+/* ════ POPULATE SELECTS ════ */
+function populateFilters(){
+  const periods=[...new Set(kpiData.map(r=>r.periode).filter(Boolean))];
+  const agents=[...new Set(kpiData.map(r=>r.nama).filter(Boolean))].sort();
+  ['fPeriode','dtPeriode'].forEach(id=>{
+    const el=$(id);if(!el)return;
+    const cur=el.value;
+    el.innerHTML='<option value="">Semua Periode</option>';
+    periods.forEach(p=>el.innerHTML+=`<option value="${p}"${cur===p?' selected':''}>${p}</option>`);
+  });
+  const fa=$('fAgen');
+  if(fa){const cur=fa.value;fa.innerHTML='<option value="">Semua Agen</option>';agents.forEach(a=>fa.innerHTML+=`<option value="${a}"${cur===a?' selected':''}>${a}</option>`);}
+
+  // update sidebar badges
+  $('sbBadgeTotal').textContent=kpiData.length;
+  const agCount=Object.keys(kpiData.reduce((o,r)=>{o[r.nama]=1;return o},{})).length;
+  $('sbBadgeAgen').textContent=agCount;
+}
+
+/* ════ STATS — uses filtered ════ */
+function updateStats(){
+  const d=filtered, total=d.length;
+  const all=kpiData.length;
+  const ach=d.filter(r=>r.status==='Achieved').length;
+  const fail=total-ach;
+  const vals=d.map(r=>stripPct(r.grandTotal)).filter(v=>!isNaN(v));
+  const avg=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+  const achPct=total>0?Math.round(ach/total*100):0;
+  const failPct=total>0?Math.round(fail/total*100):0;
+  const on=isActive();
+
+  // unique agents in filtered data
+  const agentSet=new Set(d.map(r=>r.nama).filter(Boolean));
+  const agentCount=agentSet.size;
+
+  // avg of not-achieved scores
+  const failVals=d.filter(r=>r.status==='Not Achieved').map(r=>stripPct(r.grandTotal)).filter(v=>!isNaN(v));
+  const failAvg=failVals.length?(failVals.reduce((a,b)=>a+b,0)/failVals.length):null;
+
+  // gap to 90% target
+  const gap=avg!==null?(90-avg):null;
+
+  /* ── Total ── */
+  $('stTotal').textContent=total;
+  $('stTotalDesc').textContent=on?`dari ${all} total entri tercatat`:'Data performa agen tercatat';
+  $('trendTotal').textContent=on?`Filter: ${total}/${all}`:`${total} entri`;
+  const progTotalPct=all>0?Math.round(total/all*100):100;
+  $('progTotal').style.width=progTotalPct+'%';
+  $('progTotalVal').textContent=on?progTotalPct+'%':'100%';
+  $('stFootAgents').textContent=agentCount+' agen';
+
+  /* ── Achieved ── */
+  $('stAch').textContent=ach;
+  $('stAchDesc').textContent='Grand Total ≥ 90% · target terpenuhi';
+  $('trendAch').textContent=achPct+'% rate';
+  $('trendAch').className='scard-badge '+(achPct>=50?'badge-green':'badge-warn');
+  $('progAch').style.width=achPct+'%';
+  $('progAchVal').textContent=achPct+'%';
+  $('stFootAchRate').textContent=achPct>=70?'🟢 Baik ('+achPct+'%)':achPct>=50?'🟡 Cukup ('+achPct+'%)':'🔴 Perlu perbaikan ('+achPct+'%)';
+
+  /* ── Not Achieved ── */
+  $('stFail').textContent=fail;
+  $('stFailDesc').textContent='Grand Total < 90% · perlu perhatian';
+  $('trendFail').textContent=failPct+'% rate';
+  $('trendFail').className='scard-badge '+(failPct>50?'badge-red':'badge-warn');
+  $('progFail').style.width=failPct+'%';
+  $('progFailVal').textContent=failPct+'%';
+  $('stFootFailAvg').textContent=failAvg!==null?Math.round(failAvg)+'% avg skor':'—';
+
+  /* ── Avg Grand Total ── */
+  $('stAvg').textContent=avg!==null?Math.round(avg)+'%':'–';
+  const avgRounded=avg!==null?Math.round(avg):0;
+  const progAvgPct=Math.min(avgRounded,100);
+  $('progAvg').style.width=progAvgPct+'%';
+  $('progAvgVal').textContent='Target 90%';
+  if(avg!==null){
+    if(avg>=90){
+      $('stAvgDesc').textContent='✅ Di atas target · performa bagus';
+      $('trendAvg').textContent='On Target';
+      $('trendAvg').className='scard-badge badge-green';
+      $('stFootGap').textContent='+'+(avgRounded-90)+'% di atas target';
+      $('stFootGap').style.color='var(--ok7)';
+    }else{
+      $('stAvgDesc').textContent='⚠️ Di bawah target 90% · perlu ditingkatkan';
+      $('trendAvg').textContent='Below Target';
+      $('trendAvg').className='scard-badge badge-red';
+      $('stFootGap').textContent=gap>0?'-'+Math.round(gap)+'% dari target':'Tepat di target';
+      $('stFootGap').style.color='var(--err7)';
+    }
+  }else{
+    $('stAvgDesc').textContent='Rata-rata skor seluruh agen';
+    $('trendAvg').textContent='—';
+    $('trendAvg').className='scard-badge badge-blue';
+    $('stFootGap').textContent='—';
+  }
+
+  // filter notes
+  const note=on?'🔽 filter aktif':'';
+  ['stTotalNote','stAchNote','stFailNote','stAvgNote'].forEach(id=>{
+    const el=$(id); if(!el)return;
+    el.textContent=note; el.classList.toggle('on',on);
+  });
+}
+
+/* ════ KPI BREAKDOWN ════ */
+function renderKPIBreakdown(){
+  const d=filtered;
+  if(!d.length){$('kpiBreakdown').style.display='none';return;}
+  $('kpiBreakdown').style.display='block';
+  const avg=(key,pct=false)=>{
+    const vals=d.map(r=>stripPct(r[key])).filter(v=>!isNaN(v));
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  };
+  const metrics=[
+    {key:'frSLA',label:'FR SLA',target:95,unit:'%',color:'#2563eb'},
+    {key:'fcr',label:'FCR',target:88,unit:'%',color:'#7c3aed'},
+    {key:'csat',label:'CSAT',target:4.5,unit:'',max:5,color:'#0891b2'},
+    {key:'qaScore',label:'QA Score',target:90,unit:'',max:100,color:'#16a34a'},
+    {key:'attendance',label:'Attendance',target:98,unit:'%',color:'#d97706'},
+    {key:'grandTotal',label:'Grand Total',target:90,unit:'%',max:100,color:'#8b5cf6'},
+  ];
+  $('kpiBreakdownBody').innerHTML=metrics.map(m=>{
+    const val=avg(m.key);
+    if(val===null)return'';
+    const max=m.max||100;
+    const fillW=Math.min(val/max*100,100);
+    const hi=val>=m.target;
+    const color=hi?'var(--ok5)':'var(--err5)';
+    const disp=m.unit==='%'?val.toFixed(1)+'%':(m.key==='csat'?val.toFixed(2):Math.round(val).toString());
+    return`<div class="kpi-metric">
+      <div class="kpi-metric-label">${m.label}</div>
+      <div class="kpi-metric-val" style="color:${hi?'var(--g9)':'var(--err7)'}">${disp}</div>
+      <div class="kpi-metric-bar"><div class="kpi-metric-fill" style="width:${fillW}%;background:${color}"></div></div>
+      <div class="kpi-metric-sub" style="color:${hi?'var(--ok7)':'var(--err7)'}">${hi?'✓ On target':'↓ Target: '+m.target+(m.unit)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ════ BEST PERFORMANCE — uses filtered ════ */
+function renderBest(){
+  const grid=$('bestGrid');
+  const d=filtered;
+  if(!d.length){grid.innerHTML=`<div style="color:var(--g4);font-size:13px;padding:8px 0;grid-column:1/-1">Tidak ada data untuk ditampilkan.</div>`;$('bestCount').textContent='0 agen';return;}
+  const byA={};
+  d.forEach(r=>{if(!byA[r.nama])byA[r.nama]={rows:[],nama:r.nama,jabatan:r.jabatan,gender:r.gender};byA[r.nama].rows.push(r);});
+  const ranked=Object.values(byA).map(a=>{
+    const vals=a.rows.map(r=>stripPct(r.grandTotal)).filter(v=>!isNaN(v));
+    const avg=vals.length?vals.reduce((s,v)=>s+v,0)/vals.length:0;
+    const best=a.rows.reduce((b,r)=>stripPct(r.grandTotal)>stripPct(b.grandTotal)?r:b,a.rows[0]);
+    const achC=a.rows.filter(r=>r.status==='Achieved').length;
+    const avgFrSLA=a.rows.map(r=>stripPct(r.frSLA)).filter(v=>!isNaN(v));
+    const avgFCR=a.rows.map(r=>stripPct(r.fcr)).filter(v=>!isNaN(v));
+    const avgCSAT=a.rows.map(r=>stripPct(r.csat)).filter(v=>!isNaN(v));
+    const avgQA=a.rows.map(r=>stripPct(r.qaScore)).filter(v=>!isNaN(v));
+    return{...a,avg,bestRow:best,achCount:achC,
+      avgFrSLA:avgFrSLA.length?avgFrSLA.reduce((s,v)=>s+v,0)/avgFrSLA.length:null,
+      avgFCR:avgFCR.length?avgFCR.reduce((s,v)=>s+v,0)/avgFCR.length:null,
+      avgCSAT:avgCSAT.length?avgCSAT.reduce((s,v)=>s+v,0)/avgCSAT.length:null,
+      avgQA:avgQA.length?avgQA.reduce((s,v)=>s+v,0)/avgQA.length:null,
+    };
+  }).sort((a,b)=>b.avg-a.avg).slice(0,3);
+
+  $('bestCount').textContent=Object.keys(byA).length+' agen';
+  const tc=['gold','silver','bronze'],em=['🥇','🥈','🥉'],lbl=['#1 Terbaik','#2','#3'];
+  grid.innerHTML=ranked.map((a,i)=>{
+    const achPct=a.rows.length>0?Math.round(a.achCount/a.rows.length*100):0;
+    const kpis=[
+      {l:'Avg FR SLA',v:a.avgFrSLA,fmt:v=>v.toFixed(1)+'%',hi:v=>v>=95},
+      {l:'Avg FCR',v:a.avgFCR,fmt:v=>v.toFixed(1)+'%',hi:v=>v>=88},
+      {l:'Avg CSAT',v:a.avgCSAT,fmt:v=>v.toFixed(2),hi:v=>v>=4.5},
+      {l:'Avg QA Score',v:a.avgQA,fmt:v=>Math.round(v)+'',hi:v=>v>=90},
+    ];
+    return`<div class="best-card ${tc[i]}">
+      <div class="best-card-header">
+        <div class="best-rank">${em[i]}</div>
+        <div class="best-av" style="background:${ac(a.nama)}">${ini(a.nama)}</div>
+        <div class="best-name">${a.nama}</div>
+        <div class="best-meta">${a.jabatan||'CS'} · ${a.gender==='P'?'Perempuan':'Laki-laki'} · ${a.rows.length} periode</div>
+        <div class="best-score-row">
+          <span class="best-score-num">${Math.round(a.avg)}</span>
+          <span class="best-score-unit">%</span>
+        </div>
+        <div class="best-score-label">Rata-rata Grand Total · Best: ${a.bestRow.grandTotal}%</div>
+      </div>
+      <div class="best-card-body">
+        ${kpis.filter(k=>k.v!==null).map(k=>`
+          <div class="best-kpi-row">
+            <span class="best-kpi-label">${k.l}</span>
+            <span class="best-kpi-val ${k.hi(k.v)?'hi':'lo'}">${k.fmt(k.v)}</span>
+          </div>`).join('')}
+        <div class="best-achieve-bar">
+          <div class="best-achieve-label"><span>Achieved Rate</span><span style="font-weight:700;color:var(--g7)">${a.achCount}/${a.rows.length} (${achPct}%)</span></div>
+          <div class="best-achieve-track"><div class="best-achieve-fill" style="width:${achPct}%"></div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════ OVERVIEW TABLE ════ */
+function renderOvTable(){
+  const d=filtered;
+  const tbody=$('ovTbody'),empty=$('ovEmpty'),foot=$('ovFoot');
+  $('ovCount').textContent=d.length;
+  $('tblCountLabel').textContent=d.length+' data';
+  if(!d.length){tbody.innerHTML='';empty.style.display='block';foot.style.display='none';return;}
+  empty.style.display='none';foot.style.display='flex';
+
+  tbody.innerHTML=d.map(r=>{
+    const gt=stripPct(r.grandTotal);
+    const pct=isNaN(gt)?0:Math.min(gt,100);
+    const bc=pct>=90?'var(--ok5)':pct>=75?'var(--warn5)':'var(--err5)';
+    const tc=pct>=90?'var(--ok7)':pct>=75?'var(--warn7)':'var(--err7)';
+    const frSLANum=stripPct(r.frSLA);
+    const sb=r.status==='Achieved'?`<span class="badge badge-ok">✅ Achieved</span>`:`<span class="badge badge-fail">❌ Not Achieved</span>`;
+    const idx=kpiData.indexOf(r);
+    const frSLAClass=(!isNaN(frSLANum)&&frSLANum>=95)?'':'style="color:var(--err7)"';
+    return`<tr>
+      <td style="font-size:11.5px;color:var(--g5);white-space:normal;max-width:140px;min-width:120px;line-height:1.4">${r.periode||'—'}</td>
+      <td><div class="agent-cell"><div class="av" style="background:${ac(r.nama)}">${ini(r.nama)}</div><div><div class="av-name">${r.nama||'—'}</div><div class="av-sub">${r.jabatan||''} · ${r.gender==='P'?'P':'L'}</div></div></div></td>
+      <td class="num" ${frSLAClass}>${fmtN(r.frSLA)}%</td>
+      <td class="num" style="color:var(--g7)">${r.resTime||'—'}</td>
+      <td class="num">${fmtN(r.fcr)}</td>
+      <td class="num">${fmtN(r.csat)}</td>
+      <td class="num">${fmtN(r.qaScore)}</td>
+      <td class="num">${r.attendance||'—'}</td>
+      <td class="num">${r.totalPct||'—'}</td>
+      <td><div class="prog-cell"><div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${bc}"></div></div><span class="prog-label" style="color:${tc}">${gt}%</span></div></td>
+      <td>${sb}</td>
+      <td><div class="action-cell"><div class="act-btn" onclick="editData(${idx})" title="Edit">✏️</div><div class="act-btn del" onclick="deleteData(${idx})" title="Hapus">🗑️</div></div></td>
+    </tr>`;
+  }).join('');
+  $('footInfo').textContent=`Menampilkan ${d.length} dari ${kpiData.length} entri · Sort: ${sortKey} ${sortDir===-1?'↓':'↑'}`;
+}
+
+/* ════ AGENT CARDS ════ */
+function renderAgents(){
+  const grid=$('agentGrid');
+  if(!kpiData.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">👥</div><p>Belum ada data agen</p></div>`;return;}
+  const byA={};kpiData.forEach(r=>{if(!byA[r.nama])byA[r.nama]=[];byA[r.nama].push(r);});
+  grid.innerHTML=Object.entries(byA).map(([name,rows])=>{
+    const lat=rows[rows.length-1];
+    const vals=rows.map(r=>stripPct(r.grandTotal)).filter(v=>!isNaN(v));
+    const avg=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+    const pct=Math.min(avg,100);
+    const bc=pct>=90?'var(--ok5)':pct>=75?'var(--warn5)':'var(--err5)';
+    const tc=pct>=90?'var(--ok7)':pct>=75?'var(--warn7)':'var(--err7)';
+    const achC=rows.filter(r=>r.status==='Achieved').length;
+    const achPct=rows.length>0?Math.round(achC/rows.length*100):0;
+    const pillBg=avg>=90?'var(--ok1)':avg>=75?'var(--warn1)':'var(--err1)';
+    // sparkline data from grand total history
+    const sparkVals=rows.map(r=>stripPct(r.grandTotal)).filter(v=>!isNaN(v));
+    const sparkMax=Math.max(...sparkVals,90);
+    const sparkBars=sparkVals.map((v,i)=>{
+      const h=Math.max(4,Math.round(v/sparkMax*32));
+      const c=v>=90?'var(--ok5)':v>=75?'var(--warn5)':'var(--err5)';
+      return`<div class="spark-bar" style="height:${h}px;background:${c};opacity:${i===sparkVals.length-1?1:.55}" title="Grand Total: ${v}%"></div>`;
+    }).join('');
+    const kpis=[
+      {icon:'📡',l:'FR SLA Terakhir',v:fmtPct(lat.frSLA),hi:stripPct(lat.frSLA)>=95},
+      {icon:'⏱',l:'Res. Time Terakhir',v:lat.resTime||'—',hi:true},
+      {icon:'🔁',l:'FCR Terakhir',v:fmtN(lat.fcr)+'%',hi:stripPct(lat.fcr)>=88},
+      {icon:'⭐',l:'CSAT Terakhir',v:fmtN(lat.csat),hi:stripPct(lat.csat)>=4.5},
+      {icon:'📝',l:'QA Score Terakhir',v:fmtN(lat.qaScore),hi:stripPct(lat.qaScore)>=90},
+      {icon:'🗓',l:'Attendance Terakhir',v:lat.attendance||'—',hi:stripPct(lat.attendance)>=98},
+    ];
+    return`<div class="agent-card">
+      <div class="agent-card-top">
+        <div class="agent-av-lg" style="background:${ac(name)}">${ini(name)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="agent-name">${name}</div>
+          <div class="agent-meta">${lat.jabatan||'CS'} · ${lat.gender==='P'?'Perempuan':'Laki-laki'} · ${rows.length} periode</div>
+        </div>
+        <div class="agent-score-pill" style="background:${pillBg};color:${tc};font-size:16px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif">${avg}%</div>
+      </div>
+      <div style="padding:10px 16px 6px;border-bottom:1px solid var(--g1)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--g4);font-weight:500">Tren Grand Total (${sparkVals.length} periode)</span>
+          <span style="font-size:11px;font-weight:700;color:${tc}">${achC}/${rows.length} Achieved</span>
+        </div>
+        <div class="sparkline">${sparkBars}</div>
+      </div>
+      <div class="agent-kpi-list">
+        ${kpis.map(k=>`<div class="agent-kpi-item">
+          <div class="agent-kpi-icon" style="background:${k.hi?'var(--ok1)':'var(--err1)'}">${k.icon}</div>
+          <span class="agent-kpi-label">${k.l}</span>
+          <span class="agent-kpi-val ${k.hi?'hi':'lo'}">${k.v}</span>
+        </div>`).join('')}
+      </div>
+      <div class="agent-prog-wrap">
+        <div class="agent-prog-label"><span>Avg Grand Total</span><span style="font-weight:700;color:${tc}">${avg}% · Target 90%</span></div>
+        <div class="agent-prog-track"><div class="agent-prog-fill" style="width:${pct}%;background:${bc}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════ DETAIL TABLE ════ */
+function getDetailFiltered(){
+  const p=$('dtPeriode')?.value||'',q=($('dtSearch')?.value||'').toLowerCase();
+  let d=[...kpiData];
+  if(p)d=d.filter(r=>r.periode===p);
+  if(q)d=d.filter(r=>(r.nama||'').toLowerCase().includes(q)||(r.periode||'').toLowerCase().includes(q));
+  return d;
+}
+function renderDetail(){
+  const d=getDetailFiltered();
+  const tbody=$('dtTbody'),empty=$('dtEmpty');
+  $('dtCount').textContent=d.length;
+  if(!d.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=d.map((r,i)=>{
+    const idx=kpiData.indexOf(r);
+    const gt=stripPct(r.grandTotal);
+    const sb=r.status==='Achieved'?`<span class="badge badge-ok">✅</span>`:`<span class="badge badge-fail">❌</span>`;
+    const gtColor=gt>=90?'var(--ok7)':gt>=75?'var(--warn7)':'var(--err7)';
+    return`<tr>
+      <td class="num">${i+1}</td>
+      <td><div class="agent-cell"><div class="av" style="background:${ac(r.nama)};width:26px;height:26px;font-size:9.5px">${ini(r.nama)}</div><span style="font-weight:600;font-size:12.5px">${r.nama}</span></div></td>
+      <td>${r.gender||'—'}</td>
+      <td style="font-size:11.5px;color:var(--g5);white-space:normal;max-width:130px;min-width:110px">${r.periode||'—'}</td>
+      <td class="num">${fmtN(r.frSLA)}%</td><td class="num">${r.frSLAPoin||'—'}</td><td class="num">${r.frSLAPct||'—'}</td>
+      <td class="num">${r.resTime||'—'}</td><td class="num">${r.resTimePoin||'—'}</td><td class="num">${r.resTimePct||'—'}</td>
+      <td class="num">${fmtN(r.fcr)}</td><td class="num">${r.fcrPoin||'—'}</td><td class="num">${r.fcrPct||'—'}</td>
+      <td class="num">${fmtN(r.csat)}</td><td class="num">${r.csatPoin||'—'}</td><td class="num">${r.csatPct||'—'}</td>
+      <td class="num">${r.qaScore||'—'}</td><td class="num">${r.qaPoin||'—'}</td><td class="num">${r.qaPct||'—'}</td>
+      <td class="num">${r.attendance||'—'}</td><td class="num">${r.attendancePoin||'—'}</td><td class="num">${r.attendancePct||'—'}</td>
+      <td class="num">${r.totalPct||'—'}</td>
+      <td class="num num-strong" style="color:${gtColor}">${gt}%</td>
+      <td>${sb}</td>
+      <td><div class="action-cell"><div class="act-btn" onclick="editData(${idx})">✏️</div><div class="act-btn del" onclick="deleteData(${idx})">🗑️</div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════ MODAL ════ */
+function openModal(){$('modalWrap').classList.add('open');$('mTitle').textContent='Tambah Data KPI';$('fEditIdx').value='';$('kpiForm').reset();}
+function closeModal(){$('modalWrap').classList.remove('open');}
+function handleModalClick(e){if(e.target===$('modalWrap'))closeModal();}
+function editData(idx){
+  const r=kpiData[idx];if(!r)return;
+  openModal();$('mTitle').textContent='Edit Data KPI';$('fEditIdx').value=idx;
+  const m={fPeriodeVal:'periode',fNama:'nama',fJabatan:'jabatan',fGender:'gender',fFrSLA:'frSLA',fFrSLAPoin:'frSLAPoin',fFrSLAPct:'frSLAPct',fResTime:'resTime',fResTimePoin:'resTimePoin',fResTimePct:'resTimePct',fFCR:'fcr',fFCRPoin:'fcrPoin',fFCRPct:'fcrPct',fCSAT:'csat',fCSATPoin:'csatPoin',fCSATPct:'csatPct',fQA:'qaScore',fQAPoin:'qaPoin',fQAPct:'qaPct',fAttendance:'attendance',fAttendancePoin:'attendancePoin',fAttendancePct:'attendancePct',fTotalPct:'totalPct',fGrandTotal:'grandTotal',fStatus:'status'};
+  for(const[id,k]of Object.entries(m)){const el=$(id);if(el&&r[k]!==undefined)el.value=r[k];}
+}
+function saveData(e){
+  if(e&&e.preventDefault)e.preventDefault();
+  const ei=$('fEditIdx').value;
+  const get=id=>$(id)?.value||'';
+  const row={periode:get('fPeriodeVal'),nama:get('fNama'),jabatan:get('fJabatan'),gender:get('fGender'),frSLA:get('fFrSLA'),frSLAPoin:get('fFrSLAPoin'),frSLAPct:get('fFrSLAPct'),resTime:get('fResTime'),resTimePoin:get('fResTimePoin'),resTimePct:get('fResTimePct'),fcr:get('fFCR'),fcrPoin:get('fFCRPoin'),fcrPct:get('fFCRPct'),csat:get('fCSAT'),csatPoin:get('fCSATPoin'),csatPct:get('fCSATPct'),qaScore:get('fQA'),qaPoin:get('fQAPoin'),qaPct:get('fQAPct'),attendance:get('fAttendance'),attendancePoin:get('fAttendancePoin'),attendancePct:get('fAttendancePct'),totalPct:get('fTotalPct'),grandTotal:get('fGrandTotal'),status:get('fStatus')};
+  if(!row.periode||!row.nama){alert('Periode dan Nama harus diisi!');return;}
+  ei!==''?kpiData[parseInt(ei)]=row:kpiData.push(row);
+  save();closeModal();refreshAll();
+}
+function deleteData(idx){if(!confirm('Hapus data ini?'))return;kpiData.splice(idx,1);save();refreshAll();}
+function resetData(){if(!confirm('Reset ke 16 data CSV awal?'))return;kpiData=JSON.parse(JSON.stringify(SEED));save();refreshAll();}
+
+/* ════ EXPORT ════ */
+function exportCSV(){
+  if(!kpiData.length){alert('Tidak ada data.');return;}
+  const h=['Periode','Nama','Jabatan','Gender','FR SLA','FR SLA Poin','FR SLA %','Res Time','Res Time Poin','Res Time %','FCR','FCR Poin','FCR %','CSAT','CSAT Poin','CSAT %','QA Score','QA Poin','QA %','Attendance','Att Poin','Att %','Total %','Grand Total','Status'];
+  const k=['periode','nama','jabatan','gender','frSLA','frSLAPoin','frSLAPct','resTime','resTimePoin','resTimePct','fcr','fcrPoin','fcrPct','csat','csatPoin','csatPct','qaScore','qaPoin','qaPct','attendance','attendancePoin','attendancePct','totalPct','grandTotal','status'];
+  const csv=[h.join(','),...kpiData.map(r=>k.map(key=>`"${(r[key]||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download=`cs-performance-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+/* ════ TABS ════ */
+const TITLES={overview:'Overview','per-agen':'Per Agen',detail:'Detail Data',kelola:'Kelola Data'};
+function switchTab(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sb-link').forEach(b=>b.classList.remove('on'));
+  $('panel-'+id).classList.add('on');
+  if(el)el.classList.add('on');
+  $('tbTitle').textContent=TITLES[id]||id;
+  if(id==='per-agen')renderAgents();
+  if(id==='detail')renderDetail();
+}
+
+/* ════ RENDER ALL ════ */
+function renderAll(){
+  updateStats();
+  renderKPIBreakdown();
+  renderBest();
+  renderOvTable();
+}
+function refreshAll(){
+  populateFilters();
+  buildFiltered();
+  renderAll();
+  renderAgents();
+  renderDetail();
+}
+
+/* ════ STORAGE STATUS ════ */
+function updateStorageStatus(){
+  const dot=$('stDot'),txt=$('stTxt'),sub=$('stSub');
+  const connected=isSupaConnected();
+  try{
+    localStorage.setItem('_t','1');localStorage.removeItem('_t');
+    if(connected){
+      dot.style.background='var(--ok5)';
+      txt.firstChild.textContent='Supabase + Lokal ';
+      if(sub)sub.textContent=`${kpiData.length} entri · cloud sync aktif`;
+    }else{
+      dot.style.background='var(--warn5)';
+      txt.firstChild.textContent='Lokal saja ';
+      if(sub)sub.textContent=`${kpiData.length} entri · cloud belum terhubung`;
+    }
+  }catch{
+    dot.style.background='var(--err5)';
+    if(txt.firstChild)txt.firstChild.textContent='Storage Error';
+  }
+}
+// keep old alias
+function checkStorage(){updateStorageStatus();}
+
+/* ════ INIT ════ */
+window.addEventListener('DOMContentLoaded',async()=>{
+  $('tbDate').textContent=new Date().toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const th=$('th-grandTotal');if(th)th.classList.add('sort-active');
+
+  loadData();
+  updateSupaUI();
+  updateStorageStatus();
+
+  // Auto-pull from Supabase on load if connected
+  if(isSupaConnected()){
+    setSupaStatus('loading','Sinkronisasi otomatis…');
+    try{
+      const rows=await supaFetch('GET');
+      if(rows.length&&Array.isArray(rows[0].data)&&rows[0].data.length>0){
+        kpiData=rows[0].data;
+        saveLocal();
+      }
+      setSupaStatus('ok','Tersinkron · '+new Date().toLocaleTimeString('id-ID'));
+      if($('supaLastSync'))$('supaLastSync').textContent='Auto-pull saat load: '+new Date().toLocaleString('id-ID');
+    }catch(e){
+      setSupaStatus('err','Auto-pull gagal: '+e.message.slice(0,40));
+    }
+  }
+
+  refreshAll();
+  updateStorageStatus();
+  setTimeout(()=>{const o=$('loader');o.classList.add('out');setTimeout(()=>o.remove(),420);},750);
+});
+</script>
+</body>
+</html>
