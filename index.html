@@ -61,7 +61,7 @@ body{font-family:'Inter',sans-serif;background:var(--g0);color:var(--g9);min-hei
 .btn-sm{padding:6px 12px;font-size:12px}
 .btn-warn{background:var(--warn1);color:var(--warn7);border:1px solid rgba(245,158,11,.2)}
 .btn-warn:hover{background:#fde68a}
-.main{margin-left:var(--sbw);margin-top:var(--tbh);min-height:calc(100vh - var(--tbh))}
+.main{margin-left:var(--sbw);margin-top:var(--tbh);min-height:calc(100vh - var(--tbh));padding-bottom:30px}
 .panel{display:none;padding:24px;animation:fadeIn .22s ease}
 .panel.on{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -331,6 +331,7 @@ input::placeholder{color:var(--g3)}
     <div class="filter-bar">
       <span class="filter-title">🔽 Filter Data</span>
       <div class="filter-sep"></div>
+      <select class="fsel" id="fTahun" onchange="applyFilter()" style="min-width:120px"><option value="">Semua Tahun</option></select>
       <select class="fsel" id="fPeriode" onchange="applyFilter()"><option value="">Semua Periode</option></select>
       <select class="fsel" id="fAgen"    onchange="applyFilter()"><option value="">Semua Agen</option></select>
       <select class="fsel" id="fStatus"  onchange="applyFilter()">
@@ -858,12 +859,13 @@ function $(id) { return document.getElementById(id); }
 /* ═══════════════════
    FILTER
    ═══════════════════ */
-function getFV() { return { p: $('fPeriode')?.value || '', a: $('fAgen')?.value || '', s: $('fStatus')?.value || '', q: ($('fSearch')?.value || '').toLowerCase() }; }
-function isActive() { const { p, a, s, q } = getFV(); return !!(p || a || s || q); }
+function getFV() { return { t: $('fTahun')?.value || '', p: $('fPeriode')?.value || '', a: $('fAgen')?.value || '', s: $('fStatus')?.value || '', q: ($('fSearch')?.value || '').toLowerCase() }; }
+function isActive() { const { t, p, a, s, q } = getFV(); return !!(t || p || a || s || q); }
 
 function buildFiltered() {
-  const { p, a, s, q } = getFV();
+  const { t, p, a, s, q } = getFV();
   let d = [...kpiData];
+  if (t) d = d.filter(r => extractTahun(r.periode) === t);
   if (p) d = d.filter(r => r.periode === p);
   if (a) d = d.filter(r => r.nama === a);
   // FIX: Status filter sekarang pakai computeStatus, bukan nilai tersimpan
@@ -881,13 +883,23 @@ function buildFiltered() {
 }
 
 function applyFilter() {
+  // When tahun changes, re-populate periode dropdown to show only relevant periods
+  const selTahun = $('fTahun')?.value || '';
+  const periods = [...new Set(kpiData.map(r => r.periode).filter(Boolean))];
+  ['fPeriode','dtPeriode'].forEach(id => {
+    const el = $(id); if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="">Semua Periode</option>';
+    const fp = selTahun ? periods.filter(p => extractTahun(p) === selTahun) : periods;
+    fp.forEach(p => el.innerHTML += `<option value="${p}"${cur===p?' selected':''}>${p}</option>`);
+  });
   buildFiltered();
   const on = isActive();
   $('activePill').style.display = on ? 'inline-flex' : 'none';
   $('clearBtn').style.display = on ? 'flex' : 'none';
   renderAll();
 }
-function clearFilter() { ['fPeriode','fAgen','fStatus','fSearch'].forEach(id => { const e = $(id); if (e) e.value = ''; }); applyFilter(); }
+function clearFilter() { ['fTahun','fPeriode','fAgen','fStatus','fSearch'].forEach(id => { const e = $(id); if (e) e.value = ''; }); applyFilter(); }
 function sortTable(k) {
   document.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-active'));
   const th = $('th-' + k); if (th) th.classList.add('sort-active');
@@ -895,14 +907,34 @@ function sortTable(k) {
   applyFilter();
 }
 
+function extractTahun(periode) {
+  // Extract year from periode string e.g. "1 Januari - 15 Januari 2026" -> "2026"
+  const m = (periode || '').match(/\b(20\d{2})\b/);
+  return m ? m[1] : '';
+}
+
 function populateFilters() {
   const periods = [...new Set(kpiData.map(r => r.periode).filter(Boolean))];
   const agents = [...new Set(kpiData.map(r => r.nama).filter(Boolean))].sort();
+  // Extract unique years from periode
+  const years = [...new Set(kpiData.map(r => extractTahun(r.periode)).filter(Boolean))].sort();
+
+  // Populate year filter
+  const fy = $('fTahun');
+  if (fy) {
+    const curY = fy.value;
+    fy.innerHTML = '<option value="">Semua Tahun</option>';
+    years.forEach(y => fy.innerHTML += `<option value="${y}"${curY===y?' selected':''}>${y}</option>`);
+  }
+
   ['fPeriode','dtPeriode'].forEach(id => {
     const el = $(id); if (!el) return;
     const cur = el.value;
     el.innerHTML = '<option value="">Semua Periode</option>';
-    periods.forEach(p => el.innerHTML += `<option value="${p}"${cur===p?' selected':''}>${p}</option>`);
+    // Filter periods by selected tahun
+    const selTahun = $('fTahun')?.value || '';
+    const filteredPeriods = selTahun ? periods.filter(p => extractTahun(p) === selTahun) : periods;
+    filteredPeriods.forEach(p => el.innerHTML += `<option value="${p}"${cur===p?' selected':''}>${p}</option>`);
   });
   const fa = $('fAgen');
   if (fa) { const cur = fa.value; fa.innerHTML = '<option value="">Semua Agen</option>'; agents.forEach(a => fa.innerHTML += `<option value="${a}"${cur===a?' selected':''}>${a}</option>`); }
@@ -1372,5 +1404,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   setTimeout(() => { const o = $('loader'); o.classList.add('out'); setTimeout(() => o.remove(), 420); }, 750);
 });
 </script>
+
+<!-- Credit -->
+<div style="position:fixed;bottom:0;left:var(--sbw);right:0;background:linear-gradient(90deg,var(--b9),var(--b7));padding:5px 24px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.72rem;color:rgba(255,255,255,.6);font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.03em;z-index:150;border-top:1px solid rgba(255,255,255,.08)">
+  <span>📊</span>
+  <span>Dashboard build by <strong style="color:#fff;font-weight:700">Arif</strong></span>
+  <span style="opacity:.3">·</span>
+  <span>Parkee CS Performance</span>
+  <span style="opacity:.3">·</span>
+  <span style="opacity:.5">© 2026</span>
+</div>
 </body>
 </html>
