@@ -710,8 +710,23 @@ function saveLocal() {
    ═══════════════════ */
 const SUPA_CREDS_KEY = 'csKPI_supa_creds';
 
+/* FIX: Koneksi Supabase default di-hardcode, biar browser/device baru (localStorage kosong)
+   tetap auto-connect & auto-pull data terbaru — bukan jatuh ke SEED lama (18 entri). */
+const DEFAULT_SUPA = {
+  url: 'https://jegvufypvzbtrihvqpzu.supabase.co',
+  key: 'sb_publishable_hTrV939MPHFs_OiqkMBiyQ_fG6jmhUy',
+  table: 'kpi_data'
+};
+
 function getSupaCreds() {
-  try { const c = localStorage.getItem(SUPA_CREDS_KEY); return c ? JSON.parse(c) : null; } catch { return null; }
+  try {
+    const c = localStorage.getItem(SUPA_CREDS_KEY);
+    if (c) {
+      const p = JSON.parse(c);
+      if (p && p.url && p.key) return p; // creds tersimpan (override user) menang
+    }
+  } catch {}
+  return DEFAULT_SUPA; // fallback: koneksi default
 }
 function saveSupaCreds(url, key, table) {
   localStorage.setItem(SUPA_CREDS_KEY, JSON.stringify({ url: url.trim(), key: key.trim(), table: (table || 'kpi_data').trim() }));
@@ -985,22 +1000,24 @@ function updateStats() {
   $('progFailVal').textContent = failPct + '%';
   $('stFootFailAvg').textContent = failAvg !== null ? Math.round(failAvg) + '% avg skor' : '—';
 
-  $('stAvg').textContent = avg !== null ? Math.round(avg) + '%' : '–';
-  const avgRounded = avg !== null ? Math.round(avg) : 0;
-  $('progAvg').style.width = Math.min(avgRounded, 100) + '%';
+  // FIX: pakai 1 desimal, biar angka kartu konsisten dengan KPI Breakdown
+  // (dulu Math.round(89.66) = "90%" padahal badge bilang "di bawah target" + gap "-0%")
+  $('stAvg').textContent = avg !== null ? avg.toFixed(1) + '%' : '–';
+  $('progAvg').style.width = Math.min(avg !== null ? avg : 0, 100) + '%';
   $('progAvgVal').textContent = 'Target 90%';
   if (avg !== null) {
     if (avg >= 90) {
       $('stAvgDesc').textContent = '✅ Di atas target · performa bagus';
       $('trendAvg').textContent = 'On Target';
       $('trendAvg').className = 'scard-badge badge-green';
-      $('stFootGap').textContent = '+' + (avgRounded - 90) + '% di atas target';
+      $('stFootGap').textContent = '+' + (Math.round((avg - 90) * 10) / 10).toFixed(1) + '% di atas target';
       $('stFootGap').style.color = 'var(--ok7)';
     } else {
       $('stAvgDesc').textContent = '⚠️ Di bawah target 90%';
       $('trendAvg').textContent = 'Below Target';
       $('trendAvg').className = 'scard-badge badge-red';
-      $('stFootGap').textContent = gap > 0 ? '-' + Math.round(gap) + '% dari target' : 'Tepat di target';
+      const diff = Math.round((90 - avg) * 10) / 10;
+      $('stFootGap').textContent = diff > 0 ? '-' + diff.toFixed(1) + '% dari target' : 'Tepat di target';
       $('stFootGap').style.color = 'var(--err7)';
     }
   } else {
