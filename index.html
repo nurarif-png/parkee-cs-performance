@@ -170,6 +170,12 @@ thead th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;text-
 thead th:hover{color:var(--b6)}
 .sort-ic{opacity:.35;font-size:9px;margin-left:3px;display:inline-block;transition:opacity .15s}
 thead th:hover .sort-ic{opacity:.7}
+/* GROUP HEADER — Service Level Metrics vs Service Quality & Discipline */
+thead tr.grp-row th{position:static;background:var(--b0);color:var(--b7);border-bottom:1.5px solid var(--b1);padding:7px 14px;font-size:10px;letter-spacing:.1em;cursor:default}
+thead tr.grp-row th.g-sq{background:var(--pur1);color:var(--pur7);border-bottom-color:#ddd6fe}
+thead tr.grp-row th.g-gap{border-left:3px solid var(--b3)}
+th.grp-start,td.grp-start{border-left:3px solid var(--b1)}
+td.grp-sq-start{border-left:3px solid #ddd6fe}
 .sort-active{color:var(--b6) !important}
 .sort-active .sort-ic{opacity:1}
 tbody tr{border-bottom:1px solid var(--g1);transition:background .12s}
@@ -412,19 +418,26 @@ input::placeholder{color:var(--g3)}
       </div>
       <div class="table-scroll">
         <table>
-          <thead><tr>
-            <th onclick="sortTable('periode')" id="th-periode">Periode <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('nama')" id="th-nama">Agen <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('frSLA')" id="th-frSLA">FR SLA <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('resTime')" id="th-resTime">Res. Time <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('fcr')" id="th-fcr">FCR <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('csat')" id="th-csat">CSAT <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('qaScore')" id="th-qaScore">QA Score <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('attendance')" id="th-attendance">Attendance <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('totalPct')" id="th-totalPct">Total % <span class="sort-ic">↕</span></th>
-            <th onclick="sortTable('grandTotal')" id="th-grandTotal">Grand Total <span class="sort-ic">↕</span></th>
-            <th>Status</th><th>Aksi</th>
-          </tr></thead>
+          <thead>
+            <tr class="grp-row">
+              <th rowspan="2" onclick="sortTable('periode')" id="th-periode">Periode <span class="sort-ic">↕</span></th>
+              <th rowspan="2" onclick="sortTable('nama')" id="th-nama">Agen <span class="sort-ic">↕</span></th>
+              <th colspan="3" class="grp-start">Service Level Metrics · maks 55</th>
+              <th colspan="3" class="g-sq g-gap">Service Quality &amp; Discipline · maks 45</th>
+              <th rowspan="2" onclick="sortTable('totalPct')" id="th-totalPct">Total SL <span class="sort-ic">↕</span></th>
+              <th rowspan="2" onclick="sortTable('qualityPct')" id="th-qualityPct">Total SQ <span class="sort-ic">↕</span></th>
+              <th rowspan="2" onclick="sortTable('grandTotal')" id="th-grandTotal">Grand Total <span class="sort-ic">↕</span></th>
+              <th rowspan="2">Status</th><th rowspan="2">Aksi</th>
+            </tr>
+            <tr class="grp-sub">
+              <th class="grp-start" onclick="sortTable('frSLA')" id="th-frSLA">FR SLA <span class="sort-ic">↕</span></th>
+              <th onclick="sortTable('resTime')" id="th-resTime">Res. Time <span class="sort-ic">↕</span></th>
+              <th onclick="sortTable('fcr')" id="th-fcr">FCR <span class="sort-ic">↕</span></th>
+              <th class="grp-sq-start" onclick="sortTable('csat')" id="th-csat">CSAT <span class="sort-ic">↕</span></th>
+              <th onclick="sortTable('qaScore')" id="th-qaScore">QA Score <span class="sort-ic">↕</span></th>
+              <th onclick="sortTable('attendance')" id="th-attendance">Attendance <span class="sort-ic">↕</span></th>
+            </tr>
+          </thead>
           <tbody id="ovTbody"></tbody>
         </table>
       </div>
@@ -455,16 +468,22 @@ input::placeholder{color:var(--g3)}
       <div class="table-card-head"><div class="table-card-title">Detail Lengkap <span class="tbl-count" id="dtCount">0</span></div></div>
       <div class="table-scroll">
         <table>
-          <thead><tr>
-            <th>No</th><th>Agen</th><th>G</th><th>Periode</th>
-            <th>FR SLA</th><th>Poin</th><th>%</th>
-            <th>Res. Time</th><th>Poin</th><th>%</th>
-            <th>FCR</th><th>Poin</th><th>%</th>
-            <th>CSAT</th><th>Poin</th><th>%</th>
-            <th>QA</th><th>Poin</th><th>%</th>
-            <th>Attend.</th><th>Poin</th><th>%</th>
-            <th>Total %</th><th>Grand Total</th><th>Status</th><th>Aksi</th>
-          </tr></thead>
+          <thead>
+            <tr class="grp-row">
+              <th rowspan="2">No</th><th rowspan="2">Agen</th><th rowspan="2">G</th><th rowspan="2">Periode</th>
+              <th colspan="9" class="grp-start">Service Level Metrics · maks 55</th>
+              <th colspan="9" class="g-sq g-gap">Service Quality &amp; Discipline · maks 45</th>
+              <th rowspan="2">Total SL</th><th rowspan="2">Total SQ</th><th rowspan="2">Grand Total</th><th rowspan="2">Status</th><th rowspan="2">Aksi</th>
+            </tr>
+            <tr class="grp-sub">
+              <th class="grp-start">FR SLA</th><th>Poin</th><th>%</th>
+              <th>Res. Time</th><th>Poin</th><th>%</th>
+              <th>FCR</th><th>Poin</th><th>%</th>
+              <th class="grp-sq-start">CSAT</th><th>Poin</th><th>%</th>
+              <th>QA</th><th>Poin</th><th>%</th>
+              <th>Attend.</th><th>Poin</th><th>%</th>
+            </tr>
+          </thead>
           <tbody id="dtTbody"></tbody>
         </table>
       </div>
@@ -589,11 +608,11 @@ input::placeholder{color:var(--g3)}
         <div class="form-section" style="margin-bottom:0">
           <div class="form-sec-title">📊 Summary</div>
           <div class="form-grid">
-            <div class="fg"><label>Total Poin %</label><input type="text" id="fTotalPct" placeholder="cth: 36%"/></div>
+            <div class="fg"><label>Total SL (otomatis)</label><input type="text" id="fTotalPct" placeholder="—" readonly/></div>
             <div class="fg">
-              <label>Grand Total Performance *</label>
-              <input type="text" id="fGrandTotal" placeholder="cth: 86" required oninput="previewStatus()"/>
-              <div class="form-hint">Skor akhir (0–100). Status dihitung OTOMATIS dari nilai ini.</div>
+              <label>Grand Total Performance (otomatis)</label>
+              <input type="text" id="fGrandTotal" placeholder="—" readonly oninput="previewStatus()"/>
+              <div class="form-hint">Dihitung otomatis: <b>Total SL</b> (maks 55) + <b>Total SQ</b> (maks 45) = <b>Grand Total</b> (maks 100). Status dihitung dari nilai ini.</div>
             </div>
             <div class="fg full">
               <label>Status (otomatis dari Grand Total)</label>
@@ -626,8 +645,17 @@ function computeStatus(grandTotal) {
   return gt >= 90 ? 'Achieved' : 'Not Achieved';
 }
 
-/** Normalise a single row: pastikan status selalu benar */
+/** Normalise a single row: hitung TOTAL SL, TOTAL SQ, dan GRAND TOTAL dari kolom % kontribusi */
 function normaliseRow(row) {
+  const p = v => { const n = parseFloat(String(v ?? '').replace(/%$/,'').replace(',','.').trim()); return isNaN(n) ? 0 : n; };
+  const r2 = n => Math.round(n * 100) / 100;
+  // Service Level Metrics (maks 55)
+  const sl = p(row.frSLAPct) + p(row.resTimePct) + p(row.fcrPct);
+  // Service Quality & Discipline (maks 45)
+  const sq = p(row.csatPct) + p(row.qaPct) + p(row.attendancePct);
+  row.totalPct   = r2(sl) + '%';
+  row.qualityPct = r2(sq) + '%';
+  row.grandTotal = String(r2(sl + sq));
   row.status = computeStatus(row.grandTotal);
   return row;
 }
@@ -1154,13 +1182,14 @@ function renderOvTable() {
     return `<tr>
       <td style="font-size:11.5px;color:var(--g5);white-space:normal;max-width:140px;min-width:120px;line-height:1.4">${r.periode||'—'}</td>
       <td><div class="agent-cell"><div class="av" style="background:${ac(r.nama)}">${ini(r.nama)}</div><div><div class="av-name">${r.nama||'—'}</div><div class="av-sub">${r.jabatan||''} · ${r.gender==='P'?'P':'L'}</div></div></div></td>
-      <td class="num" ${frSLAStyle}>${fmtN(r.frSLA)}%</td>
+      <td class="num grp-start" ${frSLAStyle}>${fmtN(r.frSLA)}%</td>
       <td class="num" style="color:var(--g7)">${r.resTime||'—'}</td>
       <td class="num">${fmtN(r.fcr)}</td>
-      <td class="num">${fmtN(r.csat)}</td>
+      <td class="num grp-sq-start">${fmtN(r.csat)}</td>
       <td class="num">${fmtN(r.qaScore)}</td>
       <td class="num">${r.attendance||'—'}</td>
       <td class="num">${r.totalPct||'—'}</td>
+      <td class="num">${r.qualityPct||'—'}</td>
       <td><div class="prog-cell"><div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${bc}"></div></div><span class="prog-label" style="color:${tc}">${isNaN(gt)?'—':gt+'%'}</span></div></td>
       <td>${sb}</td>
       <td><div class="action-cell"><div class="act-btn" onclick="editData(${idx})" title="Edit">✏️</div><div class="act-btn del" onclick="deleteData(${idx})" title="Hapus">🗑️</div></div></td>
@@ -1256,13 +1285,14 @@ function renderDetail() {
       <td><div class="agent-cell"><div class="av" style="background:${ac(r.nama)};width:26px;height:26px;font-size:9.5px">${ini(r.nama)}</div><span style="font-weight:600;font-size:12.5px">${r.nama}</span></div></td>
       <td>${r.gender||'—'}</td>
       <td style="font-size:11.5px;color:var(--g5);white-space:normal;max-width:130px;min-width:110px">${r.periode||'—'}</td>
-      <td class="num">${fmtN(r.frSLA)}%</td><td class="num">${r.frSLAPoin||'—'}</td><td class="num">${r.frSLAPct||'—'}</td>
+      <td class="num grp-start">${fmtN(r.frSLA)}%</td><td class="num">${r.frSLAPoin||'—'}</td><td class="num">${r.frSLAPct||'—'}</td>
       <td class="num">${r.resTime||'—'}</td><td class="num">${r.resTimePoin||'—'}</td><td class="num">${r.resTimePct||'—'}</td>
       <td class="num">${fmtN(r.fcr)}</td><td class="num">${r.fcrPoin||'—'}</td><td class="num">${r.fcrPct||'—'}</td>
-      <td class="num">${fmtN(r.csat)}</td><td class="num">${r.csatPoin||'—'}</td><td class="num">${r.csatPct||'—'}</td>
+      <td class="num grp-sq-start">${fmtN(r.csat)}</td><td class="num">${r.csatPoin||'—'}</td><td class="num">${r.csatPct||'—'}</td>
       <td class="num">${r.qaScore||'—'}</td><td class="num">${r.qaPoin||'—'}</td><td class="num">${r.qaPct||'—'}</td>
       <td class="num">${r.attendance||'—'}</td><td class="num">${r.attendancePoin||'—'}</td><td class="num">${r.attendancePct||'—'}</td>
       <td class="num">${r.totalPct||'—'}</td>
+      <td class="num">${r.qualityPct||'—'}</td>
       <td class="num num-strong" style="color:${gtColor}">${isNaN(gt)?'—':gt+'%'}</td>
       <td>${sb}</td>
       <td><div class="action-cell"><div class="act-btn" onclick="editData(${idx})">✏️</div><div class="act-btn del" onclick="deleteData(${idx})">🗑️</div></div></td>
@@ -1277,7 +1307,7 @@ function previewStatus() {
   const gt = $('fGrandTotal')?.value?.trim();
   const preview = $('statusPreview');
   if (!preview) return;
-  if (!gt) { preview.style.background = 'var(--g0)'; preview.style.color = 'var(--g4)'; preview.textContent = '— masukkan Grand Total dulu'; return; }
+  if (!gt) { preview.style.background = 'var(--g0)'; preview.style.color = 'var(--g4)'; preview.textContent = '— isi % kontribusi dulu'; return; }
   const status = computeStatus(gt);
   if (status === 'Achieved') {
     preview.style.background = 'var(--ok1)'; preview.style.color = 'var(--ok7)';
@@ -1286,6 +1316,17 @@ function previewStatus() {
     preview.style.background = 'var(--err1)'; preview.style.color = 'var(--err7)';
     preview.textContent = '❌ Not Achieved (Grand Total < 90)';
   }
+}
+
+/** Hitung ulang Total SL / Total SQ / Grand Total dari kolom % kontribusi di form */
+function syncScores() {
+  const gv = id => { const v = $(id)?.value; if (v === undefined) return null; const n = parseFloat(String(v).replace(/%$/,'').replace(',','.').trim()); return isNaN(n) ? 0 : n; };
+  const r2 = n => Math.round(n * 100) / 100;
+  const sl = gv('fFrSLAPct') + gv('fResTimePct') + gv('fFCRPct');
+  const sq = gv('fCSATPct') + gv('fQAPct') + gv('fAttendancePct');
+  if ($('fTotalPct')) $('fTotalPct').value = r2(sl) + '%';
+  if ($('fGrandTotal')) $('fGrandTotal').value = String(r2(sl + sq));
+  previewStatus();
 }
 
 function openModal() { $('modalWrap').classList.add('open'); $('mTitle').textContent = 'Tambah Data KPI'; $('fEditIdx').value = ''; $('kpiForm').reset(); previewStatus(); }
@@ -1297,7 +1338,7 @@ function editData(idx) {
   openModal(); $('mTitle').textContent = 'Edit Data KPI'; $('fEditIdx').value = idx;
   const m = { fPeriodeVal: 'periode', fNama: 'nama', fJabatan: 'jabatan', fGender: 'gender', fFrSLA: 'frSLA', fFrSLAPoin: 'frSLAPoin', fFrSLAPct: 'frSLAPct', fResTime: 'resTime', fResTimePoin: 'resTimePoin', fResTimePct: 'resTimePct', fFCR: 'fcr', fFCRPoin: 'fcrPoin', fFCRPct: 'fcrPct', fCSAT: 'csat', fCSATPoin: 'csatPoin', fCSATPct: 'csatPct', fQA: 'qaScore', fQAPoin: 'qaPoin', fQAPct: 'qaPct', fAttendance: 'attendance', fAttendancePoin: 'attendancePoin', fAttendancePct: 'attendancePct', fTotalPct: 'totalPct', fGrandTotal: 'grandTotal' };
   for (const [id, k] of Object.entries(m)) { const el = $(id); if (el && r[k] !== undefined) el.value = r[k]; }
-  previewStatus();
+  syncScores();
 }
 
 function saveData(e) {
@@ -1338,8 +1379,8 @@ function resetData() {
    ═══════════════════ */
 function exportCSV() {
   if (!kpiData.length) { alert('Tidak ada data.'); return; }
-  const h = ['Periode','Nama','Jabatan','Gender','FR SLA','FR SLA Poin','FR SLA %','Res Time','Res Time Poin','Res Time %','FCR','FCR Poin','FCR %','CSAT','CSAT Poin','CSAT %','QA Score','QA Poin','QA %','Attendance','Att Poin','Att %','Total %','Grand Total','Status'];
-  const k = ['periode','nama','jabatan','gender','frSLA','frSLAPoin','frSLAPct','resTime','resTimePoin','resTimePct','fcr','fcrPoin','fcrPct','csat','csatPoin','csatPct','qaScore','qaPoin','qaPct','attendance','attendancePoin','attendancePct','totalPct','grandTotal','status'];
+  const h = ['Periode','Nama','Jabatan','Gender','FR SLA','FR SLA Poin','FR SLA %','Res Time','Res Time Poin','Res Time %','FCR','FCR Poin','FCR %','CSAT','CSAT Poin','CSAT %','QA Score','QA Poin','QA %','Attendance','Att Poin','Att %','Total SL','Total SQ','Grand Total','Status'];
+  const k = ['periode','nama','jabatan','gender','frSLA','frSLAPoin','frSLAPct','resTime','resTimePoin','resTimePct','fcr','fcrPoin','fcrPct','csat','csatPoin','csatPct','qaScore','qaPoin','qaPct','attendance','attendancePoin','attendancePct','totalPct','qualityPct','grandTotal','status'];
   // FIX: Pastikan status di CSV juga computed
   const rows = kpiData.map(r => ({ ...r, status: computeStatus(r.grandTotal) }));
   const csv = [h.join(','), ...rows.map(r => k.map(key => `"${(r[key]||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');
@@ -1392,6 +1433,10 @@ function updateStorageStatus() {
    INIT
    ═══════════════════ */
 window.addEventListener('DOMContentLoaded', async () => {
+  // Auto-hitung Total SL / Total SQ / Grand Total saat % kontribusi diubah di form
+  document.getElementById('kpiForm')?.addEventListener('input', e => {
+    if (['fFrSLAPct','fResTimePct','fFCRPct','fCSATPct','fQAPct','fAttendancePct'].includes(e.target.id)) syncScores();
+  });
   $('tbDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   const th = $('th-grandTotal'); if (th) th.classList.add('sort-active');
 
