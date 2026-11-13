@@ -578,7 +578,7 @@ input::placeholder{color:var(--g3)}
           </div>
         </div>
         <div class="form-section">
-          <div class="form-sec-title">📡 Service Performance</div>
+          <div class="form-sec-title">📡 Service Level Metrics · maks 55</div>
           <div class="form-grid">
             <div class="fg"><label>FR SLA (%)</label><input type="text" id="fFrSLA" placeholder="cth: 93.02"/><div class="form-hint">Target: ≥ 95%</div></div>
             <div class="fg"><label>FR SLA Poin</label><input type="number" id="fFrSLAPoin" placeholder="0–5"/></div>
@@ -592,7 +592,7 @@ input::placeholder{color:var(--g3)}
           </div>
         </div>
         <div class="form-section">
-          <div class="form-sec-title">🌟 Quality & Discipline</div>
+          <div class="form-sec-title">🌟 Service Quality &amp; Discipline · maks 45</div>
           <div class="form-grid">
             <div class="fg"><label>CSAT Score</label><input type="text" id="fCSAT" placeholder="cth: 4.53"/></div>
             <div class="fg"><label>CSAT Poin</label><input type="number" id="fCSATPoin" placeholder="0–5"/></div>
@@ -606,17 +606,19 @@ input::placeholder{color:var(--g3)}
           </div>
         </div>
         <div class="form-section" style="margin-bottom:0">
-          <div class="form-sec-title">📊 Summary</div>
+          <div class="form-sec-title">📊 Summary (otomatis)</div>
           <div class="form-grid">
-            <div class="fg"><label>Total SL (otomatis)</label><input type="text" id="fTotalPct" placeholder="—" readonly/></div>
+            <div class="fg"><label>Total SL — Service Level (otomatis)</label><input type="text" id="fTotalPct" placeholder="—" readonly/></div>
+            <div class="fg"><label>Total SQ — Service Quality (otomatis)</label><input type="text" id="fQualityPct" placeholder="—" readonly/></div>
             <div class="fg">
               <label>Grand Total Performance (otomatis)</label>
               <input type="text" id="fGrandTotal" placeholder="—" readonly oninput="previewStatus()"/>
-              <div class="form-hint">Dihitung otomatis: <b>Total SL</b> (maks 55) + <b>Total SQ</b> (maks 45) = <b>Grand Total</b> (maks 100). Status dihitung dari nilai ini.</div>
+              <div class="form-hint">Dihitung otomatis: <b>Total SL</b> (maks 55) + <b>Total SQ</b> (maks 45) = <b>Grand Total</b> (maks 100).</div>
             </div>
+            <div class="fg full" id="formWarn" style="display:none;padding:9px 12px;border-radius:var(--r);background:#fef3c7;color:#92400e;font-size:12.5px;font-weight:600"></div>
             <div class="fg full">
               <label>Status (otomatis dari Grand Total)</label>
-              <div id="statusPreview" style="padding:10px 12px;border:1.5px solid var(--g2);border-radius:var(--r);font-size:13px;font-weight:600;background:var(--g0);color:var(--g4)">— masukkan Grand Total dulu</div>
+              <div id="statusPreview" style="padding:10px 12px;border:1.5px solid var(--g2);border-radius:var(--r);font-size:13px;font-weight:600;background:var(--g0);color:var(--g4)">— isi % kontribusi dulu</div>
             </div>
           </div>
         </div>
@@ -1320,16 +1322,27 @@ function previewStatus() {
 
 /** Hitung ulang Total SL / Total SQ / Grand Total dari kolom % kontribusi di form */
 function syncScores() {
-  const gv = id => { const v = $(id)?.value; if (v === undefined) return null; const n = parseFloat(String(v).replace(/%$/,'').replace(',','.').trim()); return isNaN(n) ? 0 : n; };
+  const gv = id => { const v = $(id)?.value; if (v === undefined || v === null) return 0; const n = parseFloat(String(v).replace(/%$/,'').replace(',','.').trim()); return isNaN(n) ? 0 : n; };
   const r2 = n => Math.round(n * 100) / 100;
   const sl = gv('fFrSLAPct') + gv('fResTimePct') + gv('fFCRPct');
   const sq = gv('fCSATPct') + gv('fQAPct') + gv('fAttendancePct');
   if ($('fTotalPct')) $('fTotalPct').value = r2(sl) + '%';
+  if ($('fQualityPct')) $('fQualityPct').value = r2(sq) + '%';
   if ($('fGrandTotal')) $('fGrandTotal').value = String(r2(sl + sq));
+  // Peringatan kalau bobot melebihi maksimum blok
+  const warn = $('formWarn');
+  if (warn) {
+    const issues = [];
+    if (sl > 55) issues.push(`Total SL ${r2(sl)}% > maks 55%`);
+    if (sq > 45) issues.push(`Total SQ ${r2(sq)}% > maks 45%`);
+    if (r2(sl + sq) > 100) issues.push(`Grand Total ${r2(sl + sq)}% > 100%`);
+    warn.style.display = issues.length ? 'block' : 'none';
+    warn.textContent = issues.length ? '⚠️ ' + issues.join(' · ') + ' — cek lagi % kontribusinya' : '';
+  }
   previewStatus();
 }
 
-function openModal() { $('modalWrap').classList.add('open'); $('mTitle').textContent = 'Tambah Data KPI'; $('fEditIdx').value = ''; $('kpiForm').reset(); previewStatus(); }
+function openModal() { $('modalWrap').classList.add('open'); $('mTitle').textContent = 'Tambah Data KPI'; $('fEditIdx').value = ''; $('kpiForm').reset(); syncScores(); }
 function closeModal() { $('modalWrap').classList.remove('open'); }
 function handleModalClick(e) { if (e.target === $('modalWrap')) closeModal(); }
 
@@ -1345,9 +1358,17 @@ function saveData(e) {
   if (e && e.preventDefault) e.preventDefault();
   const ei = $('fEditIdx').value;
   const get = id => $(id)?.value || '';
-  const grandTotal = get('fGrandTotal');
   if (!get('fPeriodeVal') || !get('fNama')) { alert('Periode dan Nama harus diisi!'); return; }
-  if (!grandTotal) { alert('Grand Total harus diisi!'); return; }
+  // Validasi: 6 kolom % kontribusi wajib diisi — dari situ Total SL / Total SQ / Grand Total dihitung
+  const PCT_IDS = ['fFrSLAPct','fResTimePct','fFCRPct','fCSATPct','fQAPct','fAttendancePct'];
+  const missing = PCT_IDS.filter(id => !String($(id)?.value || '').trim());
+  if (missing.length) { alert('Kolom % kontribusi belum lengkap:\n• ' + missing.join('\n• ')); return; }
+  syncScores();
+  const grandTotal = get('fGrandTotal');
+  const gtN = parseFloat(grandTotal);
+  if (!isNaN(gtN) && gtN > 100) {
+    if (!confirm(`Grand Total ${gtN}% melebihi batas 100%.\nCek lagi % kontribusinya.\n\nTetap simpan?`)) return;
+  }
 
   const row = {
     periode: get('fPeriodeVal'), nama: get('fNama'), jabatan: get('fJabatan'), gender: get('fGender'),
@@ -1357,7 +1378,7 @@ function saveData(e) {
     csat: get('fCSAT'), csatPoin: get('fCSATPoin'), csatPct: get('fCSATPct'),
     qaScore: get('fQA'), qaPoin: get('fQAPoin'), qaPct: get('fQAPct'),
     attendance: get('fAttendance'), attendancePoin: get('fAttendancePoin'), attendancePct: get('fAttendancePct'),
-    totalPct: get('fTotalPct'), grandTotal: grandTotal,
+    totalPct: get('fTotalPct'), qualityPct: get('fQualityPct'), grandTotal: grandTotal,
     // FIX: Status selalu dihitung otomatis dari grandTotal
     status: computeStatus(grandTotal)
   };
